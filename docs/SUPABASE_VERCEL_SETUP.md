@@ -106,12 +106,14 @@ npx supabase secrets set RUN_SIGNAL_BOT_SECRET="$RUN_SIGNAL_BOT_SECRET"
 
 ```bash
 supabase functions deploy run-signal-bot --no-verify-jwt
+supabase functions deploy test-line --no-verify-jwt
 ```
 
 `npx` でCLIを使う場合:
 
 ```bash
 npx supabase functions deploy run-signal-bot --no-verify-jwt
+npx supabase functions deploy test-line --no-verify-jwt
 ```
 
 手動テスト:
@@ -120,6 +122,24 @@ npx supabase functions deploy run-signal-bot --no-verify-jwt
 curl -X POST \
   https://brdlwwoyunxvigkaxhav.supabase.co/functions/v1/run-signal-bot \
   -H 'x-bot-secret: YOUR_RUN_SIGNAL_BOT_SECRET'
+```
+
+LINEだけをテスト:
+
+```bash
+curl -X POST \
+  https://brdlwwoyunxvigkaxhav.supabase.co/functions/v1/test-line \
+  -H 'x-bot-secret: YOUR_RUN_SIGNAL_BOT_SECRET'
+```
+
+任意メッセージでテスト:
+
+```bash
+curl -X POST \
+  https://brdlwwoyunxvigkaxhav.supabase.co/functions/v1/test-line \
+  -H 'x-bot-secret: YOUR_RUN_SIGNAL_BOT_SECRET' \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"LINE通知テストです"}'
 ```
 
 ## 6. Vercelへ環境変数を設定する

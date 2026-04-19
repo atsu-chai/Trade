@@ -128,6 +128,14 @@ npm install
 npm run dev
 ```
 
+LINE通知だけをテストする場合:
+
+```bash
+curl -X POST \
+  https://brdlwwoyunxvigkaxhav.supabase.co/functions/v1/test-line \
+  -H 'x-bot-secret: YOUR_RUN_SIGNAL_BOT_SECRET'
+```
+
 ## 実データ連携について
 
 現時点の `SampleMarketDataProvider` はデモ用データを生成します。SBI証券、kabuステーションAPI、有料マーケットデータAPIなどに接続する場合は、`app/services.py` の `MarketDataProvider` を実装差し替えしてください。
