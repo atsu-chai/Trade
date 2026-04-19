@@ -1,5 +1,3 @@
-import { signInWithOtp } from "@/app/actions";
-
 export default function LoginPage({ searchParams }: { searchParams: Promise<{ message?: string }> }) {
   return (
     <main>
@@ -9,7 +7,7 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ me
           Google Cloud OAuthを使わず、Supabase Email OTP / Magic Linkでログインします。許可されたメールアドレスだけ利用できます。
         </p>
         <LoginMessage searchParams={searchParams} />
-        <form action={signInWithOtp}>
+        <form action="/auth/sign-in" method="POST">
           <label>
             メールアドレス
             <input type="email" name="email" required placeholder="you@example.com" />

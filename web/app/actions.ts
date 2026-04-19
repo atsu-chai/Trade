@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -11,21 +10,6 @@ function text(formData: FormData, key: string) {
 
 function numberOrNull(value: string) {
   return value === "" ? null : Number(value);
-}
-
-export async function signInWithOtp(formData: FormData) {
-  const email = text(formData, "email");
-  const supabase = await createClient();
-  const headerStore = await headers();
-  const origin = headerStore.get("origin") || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: `${origin}/auth/callback`,
-    },
-  });
-  if (error) redirect(`/login?message=${encodeURIComponent(error.message)}`);
-  redirect("/login?message=ログイン用メールを送信しました。");
 }
 
 export async function signOut() {
