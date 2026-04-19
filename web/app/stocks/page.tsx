@@ -39,6 +39,7 @@ export default async function StocksPage({ searchParams }: { searchParams: Promi
                 <th>コード</th>
                 <th>銘柄名</th>
                 <th>最新終値</th>
+                <th>価格日</th>
                 <th>前日比</th>
                 <th>出来高倍率</th>
                 <th>シグナル</th>
@@ -57,6 +58,7 @@ export default async function StocksPage({ searchParams }: { searchParams: Promi
                     <small>{stock.tags}</small>
                   </td>
                   <td>{formatNumber(stock.latest_close)}</td>
+                  <td>{stock.latest_price_at ? String(stock.latest_price_at).slice(0, 10) : "-"}</td>
                   <td>{formatNumber(stock.price_change_pct)}%</td>
                   <td>{formatNumber(stock.volume_ratio)}倍</td>
                   <td>

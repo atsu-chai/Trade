@@ -127,6 +127,17 @@ function numberOrNull(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function jquantsCodeCandidates(code: string) {
+  const normalized = code.trim().toUpperCase();
+  if (/^\d{4}$/.test(normalized)) {
+    return [normalized, `${normalized}0`];
+  }
+  if (/^\d{5}$/.test(normalized) && normalized.endsWith("0")) {
+    return [normalized, normalized.slice(0, 4)];
+  }
+  return [normalized];
+}
+
 async function getJQuantsIdToken() {
   if (JQUANTS_REFRESH_TOKEN) {
     const response = await fetch(
@@ -156,11 +167,9 @@ async function getJQuantsIdToken() {
   throw new Error("J-Quants credentials are missing. Set JQUANTS_REFRESH_TOKEN or JQUANTS_EMAIL/JQUANTS_PASSWORD.");
 }
 
-async function fetchJQuantsCandles(stock: Stock, idToken: string): Promise<Candle[]> {
-  const to = new Date();
-  const from = new Date(to.getTime() - 420 * 24 * 60 * 60 * 1000);
+async function fetchJQuantsQuotes(stock: Stock, idToken: string, code: string, from: Date, to: Date) {
   const params = new URLSearchParams({
-    code: stock.code.trim(),
+    code,
     from: formatDate(from),
     to: formatDate(to),
   });
@@ -174,19 +183,35 @@ async function fetchJQuantsCandles(stock: Stock, idToken: string): Promise<Candl
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(`J-Quants daily_quotes failed for ${stock.code}: ${response.status} ${JSON.stringify(body)}`);
+      throw new Error(`J-Quants daily_quotes failed for ${stock.code} as ${code}: ${response.status} ${JSON.stringify(body)}`);
     }
     quotes.push(...((body.daily_quotes ?? []) as JQuantsQuote[]));
     paginationKey = String(body.pagination_key ?? "");
   } while (paginationKey);
 
+  return quotes;
+}
+
+async function fetchJQuantsCandles(stock: Stock, idToken: string): Promise<Candle[]> {
+  const to = new Date();
+  const from = new Date(to.getTime() - 420 * 24 * 60 * 60 * 1000);
+  const quotes: JQuantsQuote[] = [];
+
+  for (const code of jquantsCodeCandidates(stock.code)) {
+    const fetched = await fetchJQuantsQuotes(stock, idToken, code, from, to);
+    if (fetched.length > 0) {
+      quotes.push(...fetched);
+      break;
+    }
+  }
+
   const candles = quotes
     .map((quote) => {
-      const open = numberOrNull(quote.AdjustmentOpen) ?? numberOrNull(quote.Open);
-      const high = numberOrNull(quote.AdjustmentHigh) ?? numberOrNull(quote.High);
-      const low = numberOrNull(quote.AdjustmentLow) ?? numberOrNull(quote.Low);
-      const close = numberOrNull(quote.AdjustmentClose) ?? numberOrNull(quote.Close);
-      const volume = numberOrNull(quote.AdjustmentVolume) ?? numberOrNull(quote.Volume);
+      const open = numberOrNull(quote.Open);
+      const high = numberOrNull(quote.High);
+      const low = numberOrNull(quote.Low);
+      const close = numberOrNull(quote.Close);
+      const volume = numberOrNull(quote.Volume);
       if (open === null || high === null || low === null || close === null || volume === null) return null;
       return {
         ts: jquantsDate(quote.Date),

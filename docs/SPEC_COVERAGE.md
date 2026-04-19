@@ -64,7 +64,7 @@
 - 株価/出来高/ローソク足取得
 
   - J-Quants API `/prices/daily_quotes`
-  - 調整後OHLCVを優先して保存
+  - 表示値とシグナル計算は通常OHLCVを保存して使用
   - 過去約1年分の日足を取得
 
 ## MVPとして枠を実装済みだが、追加データProviderが必要

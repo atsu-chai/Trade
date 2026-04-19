@@ -72,6 +72,7 @@ export default async function DashboardPage() {
                   <th>シグナル</th>
                   <th>スコア</th>
                   <th>最新終値</th>
+                  <th>価格日</th>
                 </tr>
               </thead>
               <tbody>
@@ -84,6 +85,7 @@ export default async function DashboardPage() {
                     </td>
                     <td>{stock.score ?? "-"}</td>
                     <td>{formatNumber(stock.latest_close)}</td>
+                    <td>{stock.latest_price_at ? String(stock.latest_price_at).slice(0, 10) : "-"}</td>
                   </tr>
                 ))}
               </tbody>
