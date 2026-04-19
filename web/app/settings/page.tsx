@@ -14,6 +14,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   return (
     <main>
       {params.message ? <div className="notice">{params.message}</div> : null}
+      <section className="page-head">
+        <div>
+          <p className="eyebrow">Settings</p>
+          <h1>設定</h1>
+          <p className="muted">Bot手動実行、LINEテスト、MVP設定値の確認を行います。</p>
+        </div>
+      </section>
       <section className="grid two">
         <div className="panel">
           <h1>手動実行</h1>

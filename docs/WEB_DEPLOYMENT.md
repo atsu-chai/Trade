@@ -59,6 +59,7 @@ Authentication
 https://Vercelで発行されたURL/login
 https://Vercelで発行されたURL/dashboard
 https://Vercelで発行されたURL/api/health
+https://Vercelで発行されたURL/backtest
 ```
 
 `/api/health` が以下を返せばWebアプリは起動しています。

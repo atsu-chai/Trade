@@ -21,11 +21,18 @@ export default async function EditStockPage({ params }: { params: Promise<{ id: 
 
   return (
     <main>
-      <section className="grid two">
-        <div className="panel">
+      <section className="page-head">
+        <div>
+          <p className="eyebrow">Stock Detail</p>
           <h1>
             {stock.code} {stock.name}
           </h1>
+          <p className="muted">チャート、指標、シグナル根拠、保有設定を確認します。</p>
+        </div>
+      </section>
+      <section className="grid two">
+        <div className="panel">
+          <h2>チャートと指標</h2>
           <PriceChart candles={candles ?? []} />
           <div className="grid two" style={{ marginTop: 18 }}>
             <div>

@@ -23,6 +23,16 @@ export default async function DashboardPage() {
 
   return (
     <main>
+      <section className="page-head">
+        <div>
+          <p className="eyebrow">Dashboard</p>
+          <h1>ダッシュボード</h1>
+          <p className="muted">監視銘柄、最新シグナル、通知状況をまとめて確認します。</p>
+        </div>
+        <Link className="button" href="/settings">
+          手動実行
+        </Link>
+      </section>
       <div className="notice">
         <strong>免責:</strong> 本システムは投資助言ではありません。表示内容は売買を推奨・保証するものではなく、最終判断は利用者本人が行ってください。
       </div>
@@ -53,7 +63,7 @@ export default async function DashboardPage() {
       <section className="grid two">
         <div className="panel">
           <h1>高スコア銘柄</h1>
-          <div className="table-wrap">
+          {stocks?.length ? <div className="table-wrap">
             <table>
               <thead>
                 <tr>
@@ -78,7 +88,7 @@ export default async function DashboardPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </div> : <div className="empty">銘柄を登録し、Botを実行するとここに表示されます。</div>}
           <p>
             <Link href="/stocks">銘柄管理へ</Link>
           </p>
@@ -86,7 +96,7 @@ export default async function DashboardPage() {
 
         <div className="panel">
           <h1>通知履歴</h1>
-          {(notifications ?? []).map((item) => (
+          {notifications?.length ? (notifications ?? []).map((item) => (
             <article key={item.id}>
               <strong>
                 {item.stocks?.code} {item.stocks?.name}
@@ -96,7 +106,7 @@ export default async function DashboardPage() {
               </p>
               {item.error ? <p className="muted">{item.error}</p> : null}
             </article>
-          ))}
+          )) : <div className="empty">通知履歴はまだありません。</div>}
         </div>
       </section>
     </main>

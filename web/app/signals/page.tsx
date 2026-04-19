@@ -18,9 +18,15 @@ export default async function SignalsPage() {
   return (
     <main>
       {error ? <div className="notice">{error.message}</div> : null}
+      <section className="page-head">
+        <div>
+          <p className="eyebrow">Signals</p>
+          <h1>シグナル一覧</h1>
+          <p className="muted">シグナル種別、点数、リスク、根拠を新しい順に確認します。</p>
+        </div>
+      </section>
       <section className="panel">
-        <h1>シグナル一覧</h1>
-        {(signals ?? []).map((signal) => (
+        {signals?.length ? (signals ?? []).map((signal) => (
           <article key={signal.id}>
             <h2>
               {signal.stocks?.code} {signal.stocks?.name}{" "}
@@ -42,9 +48,8 @@ export default async function SignalsPage() {
               <p className="muted">注意: {(signal.cautions_json ?? []).join(" / ")}</p>
             ) : null}
           </article>
-        ))}
+        )) : <div className="empty">まだシグナルがありません。設定画面からBotを実行してください。</div>}
       </section>
     </main>
   );
 }
-

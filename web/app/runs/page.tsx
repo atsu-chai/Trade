@@ -13,9 +13,15 @@ export default async function RunsPage() {
   return (
     <main>
       {error ? <div className="notice">{error.message}</div> : null}
+      <section className="page-head">
+        <div>
+          <p className="eyebrow">Runs</p>
+          <h1>Bot実行履歴</h1>
+          <p className="muted">Cronと手動実行の処理結果を確認します。</p>
+        </div>
+      </section>
       <section className="panel">
-        <h1>Bot実行履歴</h1>
-        <div className="table-wrap">
+        {runs?.length ? <div className="table-wrap">
           <table>
             <thead>
               <tr>
@@ -38,9 +44,8 @@ export default async function RunsPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </div> : <div className="empty">実行履歴はまだありません。</div>}
       </section>
     </main>
   );
 }
-

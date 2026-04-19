@@ -21,17 +21,18 @@ export default async function StocksPage({ searchParams }: { searchParams: Promi
     <main>
       {params.message ? <div className="notice">{params.message}</div> : null}
       {error ? <div className="notice">{error.message}</div> : null}
-      <section className="panel">
-        <div className="actions" style={{ justifyContent: "space-between" }}>
-          <div>
-            <h1>監視銘柄</h1>
-            <p className="muted">Email OTPでログインした本人の銘柄だけ表示します。</p>
-          </div>
-          <Link className="button" href="/stocks/new">
-            銘柄を追加
-          </Link>
+      <section className="page-head">
+        <div>
+          <p className="eyebrow">Watchlist</p>
+          <h1>監視銘柄</h1>
+          <p className="muted">銘柄、保有情報、監視状態を管理します。</p>
         </div>
-        <div className="table-wrap">
+        <Link className="button" href="/stocks/new">
+          銘柄を追加
+        </Link>
+      </section>
+      <section className="panel">
+        {stocks?.length ? <div className="table-wrap">
           <table>
             <thead>
               <tr>
@@ -78,9 +79,8 @@ export default async function StocksPage({ searchParams }: { searchParams: Promi
               ))}
             </tbody>
           </table>
-        </div>
+        </div> : <div className="empty">まだ銘柄がありません。最初の監視銘柄を追加してください。</div>}
       </section>
     </main>
   );
 }
-

@@ -182,6 +182,7 @@ Output Directory: .next
 /stocks          銘柄管理
 /stocks/[id]     銘柄詳細、チャート、指標、編集
 /signals         シグナル履歴
+/backtest        バックテスト
 /notifications   LINE通知履歴
 /runs            Bot実行履歴
 /settings        手動実行、LINEテスト、設定確認

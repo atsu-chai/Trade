@@ -17,10 +17,15 @@ export default async function NotificationsPage() {
   return (
     <main>
       {error ? <div className="notice">{error.message}</div> : null}
+      <section className="page-head">
+        <div>
+          <p className="eyebrow">Notifications</p>
+          <h1>通知履歴</h1>
+          <p className="muted">LINE送信、重複スキップ、エラーを確認します。</p>
+        </div>
+      </section>
       <section className="panel">
-        <h1>通知履歴</h1>
-        <p className="muted">LINE送信、重複スキップ、エラーを確認します。</p>
-        {(notifications ?? []).map((item) => (
+        {notifications?.length ? (notifications ?? []).map((item) => (
           <article key={item.id}>
             <strong>
               {item.stocks?.code} {item.stocks?.name}
@@ -31,9 +36,8 @@ export default async function NotificationsPage() {
             {item.error ? <p className="muted">{item.error}</p> : null}
             <pre style={{ whiteSpace: "pre-wrap" }}>{item.message}</pre>
           </article>
-        ))}
+        )) : <div className="empty">通知履歴はまだありません。</div>}
       </section>
     </main>
   );
 }
-
