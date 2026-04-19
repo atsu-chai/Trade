@@ -7,12 +7,12 @@ select
   ti.price_change_pct,
   ti.volume_ratio,
   ti.liquidity_value,
-  latest_candle.ts as latest_price_at,
   sig.signal_type,
   sig.score,
   sig.risk_level,
   sig.strength,
-  sig.created_at as signal_at
+  sig.created_at as signal_at,
+  latest_candle.ts as latest_price_at
 from public.stocks s
 left join public.technical_indicators ti on ti.stock_id = s.id
 left join lateral (
