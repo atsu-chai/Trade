@@ -6,6 +6,7 @@ create table if not exists public.settings (
 
 alter table public.settings enable row level security;
 
+drop policy if exists "allowed users can read settings" on public.settings;
 create policy "allowed users can read settings"
 on public.settings
 for select
@@ -16,6 +17,7 @@ using (
   )
 );
 
+drop policy if exists "allowed users can read bot runs" on public.bot_runs;
 create policy "allowed users can read bot runs"
 on public.bot_runs
 for select
@@ -45,4 +47,3 @@ values
     'text', '本システムは投資助言ではありません。表示内容は売買を推奨・保証するものではなく、最終判断は利用者本人が行ってください。'
   ))
 on conflict (key) do nothing;
-

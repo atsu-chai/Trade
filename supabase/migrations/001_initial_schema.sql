@@ -164,6 +164,7 @@ alter table public.notification_history enable row level security;
 alter table public.notification_state enable row level security;
 alter table public.bot_runs enable row level security;
 
+drop policy if exists "allowed emails are visible to allowed users" on public.allowed_emails;
 create policy "allowed emails are visible to allowed users"
 on public.allowed_emails
 for select
@@ -174,17 +175,20 @@ using (
   )
 );
 
+drop policy if exists "users can read own profile" on public.profiles;
 create policy "users can read own profile"
 on public.profiles
 for select
 using (auth.uid() = id);
 
+drop policy if exists "users can manage own stocks" on public.stocks;
 create policy "users can manage own stocks"
 on public.stocks
 for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
+drop policy if exists "users can read own price candles" on public.price_candles;
 create policy "users can read own price candles"
 on public.price_candles
 for select
@@ -196,6 +200,7 @@ using (
   )
 );
 
+drop policy if exists "users can read own indicators" on public.technical_indicators;
 create policy "users can read own indicators"
 on public.technical_indicators
 for select
@@ -207,6 +212,7 @@ using (
   )
 );
 
+drop policy if exists "users can read own signals" on public.signals;
 create policy "users can read own signals"
 on public.signals
 for select
@@ -218,6 +224,7 @@ using (
   )
 );
 
+drop policy if exists "users can read own notifications" on public.notification_history;
 create policy "users can read own notifications"
 on public.notification_history
 for select
@@ -229,6 +236,7 @@ using (
   )
 );
 
+drop policy if exists "users can read own notification state" on public.notification_state;
 create policy "users can read own notification state"
 on public.notification_state
 for select
