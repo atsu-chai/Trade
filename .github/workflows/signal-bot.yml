@@ -2,11 +2,6 @@ name: Stock Signal Bot
 
 on:
   workflow_dispatch:
-  schedule:
-    # UTC. 23:00-23:45 is 08:00-08:45 JST on the next day.
-    - cron: "*/15 23 * * 0-4"
-    # UTC. 00:00-06:45 is 09:00-15:45 JST.
-    - cron: "*/15 0-6 * * 1-5"
 
 permissions:
   contents: write
