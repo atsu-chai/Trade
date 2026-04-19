@@ -3,6 +3,8 @@ data/*.sqlite3-*
 supabase/.temp/
 .env
 web/.env.local
+web/.next/
+web/node_modules/
 __pycache__/
 *.py[cod]
 .DS_Store

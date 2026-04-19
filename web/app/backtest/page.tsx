@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { CandlestickChart } from "@/components/candlestick-chart";
 import { createClient } from "@/lib/supabase/server";
 import { runBacktest } from "@/lib/backtest";
 import { formatNumber } from "@/lib/ui";
@@ -65,7 +66,14 @@ export default async function BacktestPage({ searchParams }: { searchParams: Pro
             <h2>
               {selectedStock.code} {selectedStock.name} の過去1年チャート
             </h2>
-            <BacktestChart candles={candles ?? []} trades={result.trades} />
+            <CandlestickChart
+              candles={candles ?? []}
+              markers={result.trades.map((trade) => ({
+                ts: trade.entryDate,
+                tone: trade.returnPct >= 0 ? "good" : "bad",
+              }))}
+              title={`${selectedStock.code} ${selectedStock.name}`}
+            />
             <p className="muted">
               対象期間: {result.startDate?.slice(0, 10) ?? "-"}〜{result.endDate?.slice(0, 10) ?? "-"} / 日足 {result.candleCount}本
             </p>
@@ -145,57 +153,6 @@ export default async function BacktestPage({ searchParams }: { searchParams: Pro
         </>
       )}
     </main>
-  );
-}
-
-function BacktestChart({
-  candles,
-  trades,
-}: {
-  candles: Array<{ ts: string; close: number | string }>;
-  trades: Array<{ entryDate: string; exitDate: string; returnPct: number }>;
-}) {
-  const normalized = candles
-    .map((candle) => ({ ts: candle.ts, close: Number(candle.close) }))
-    .filter((candle) => !Number.isNaN(candle.close));
-  const closes = normalized.map((candle) => candle.close);
-  const min = Math.min(...closes);
-  const max = Math.max(...closes);
-  const width = 960;
-  const height = 280;
-
-  if (normalized.length < 2) {
-    return <div className="empty">チャート表示には価格データが必要です。</div>;
-  }
-
-  const xForIndex = (index: number) => (index / Math.max(normalized.length - 1, 1)) * width;
-  const yForClose = (close: number) => height - ((close - min) / Math.max(max - min, 1)) * height;
-  const path = normalized
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${xForIndex(index).toFixed(2)} ${yForClose(point.close).toFixed(2)}`)
-    .join(" ");
-  const dateToIndex = new Map(normalized.map((point, index) => [point.ts.slice(0, 10), index]));
-
-  return (
-    <svg className="chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="バックテストチャート">
-      <path d={path} fill="none" stroke="#087f8c" strokeWidth="3" />
-      {trades.slice(0, 40).map((trade, index) => {
-        const entryIndex = dateToIndex.get(trade.entryDate.slice(0, 10));
-        if (entryIndex === undefined) return null;
-        const point = normalized[entryIndex];
-        return (
-          <circle
-            key={`${trade.entryDate}-${index}`}
-            cx={xForIndex(entryIndex)}
-            cy={yForClose(point.close)}
-            r="5"
-            fill={trade.returnPct >= 0 ? "#147a4a" : "#b42318"}
-          />
-        );
-      })}
-      <text x="10" y="22" fill="#5d6b7a" fontSize="14">
-        高値 {formatNumber(max)} / 安値 {formatNumber(min)}
-      </text>
-    </svg>
   );
 }
 

@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { CandlestickChart } from "@/components/candlestick-chart";
 import { StockForm } from "@/components/stock-form";
 import { createClient } from "@/lib/supabase/server";
 import { badgeClass, formatNumber } from "@/lib/ui";
@@ -33,7 +34,7 @@ export default async function EditStockPage({ params }: { params: Promise<{ id: 
       <section className="grid two">
         <div className="panel">
           <h2>チャートと指標</h2>
-          <PriceChart candles={candles ?? []} />
+          <CandlestickChart candles={candles ?? []} title={`${stock.code} ${stock.name}`} />
           <div className="grid two" style={{ marginTop: 18 }}>
             <div>
               <strong>現在値</strong>
@@ -73,36 +74,9 @@ export default async function EditStockPage({ params }: { params: Promise<{ id: 
         </div>
       </section>
       <section className="panel" style={{ marginTop: 18 }}>
-        <h1>銘柄編集</h1>
+        <h1>銘柄詳細・設定</h1>
         <StockForm stock={stock} />
       </section>
     </main>
-  );
-}
-
-function PriceChart({ candles }: { candles: Array<{ close: number | string; ts: string }> }) {
-  const points = candles.slice(-60).map((candle) => Number(candle.close)).filter((value) => !Number.isNaN(value));
-  if (points.length < 2) {
-    return <div className="notice">チャート表示にはBot実行後の価格データが必要です。</div>;
-  }
-  const min = Math.min(...points);
-  const max = Math.max(...points);
-  const width = 640;
-  const height = 220;
-  const path = points
-    .map((value, index) => {
-      const x = (index / Math.max(points.length - 1, 1)) * width;
-      const y = height - ((value - min) / Math.max(max - min, 1)) * height;
-      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
-    .join(" ");
-
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="終値チャート" style={{ width: "100%", background: "#fff", border: "1px solid #d7dee8", borderRadius: 8 }}>
-      <path d={path} fill="none" stroke="#087f8c" strokeWidth="3" />
-      <text x="8" y="20" fill="#5d6b7a" fontSize="14">
-        高値 {formatNumber(max)} / 安値 {formatNumber(min)}
-      </text>
-    </svg>
   );
 }

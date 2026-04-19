@@ -1,4 +1,8 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import { upsertStock } from "@/app/actions";
+import { STOCK_MASTER } from "@/lib/stock-master";
 
 type Stock = {
   id?: number;
@@ -15,23 +19,75 @@ type Stock = {
 };
 
 export function StockForm({ stock }: { stock?: Stock }) {
+  const [code, setCode] = useState(stock?.code ?? "");
+  const [name, setName] = useState(stock?.name ?? "");
+  const [tags, setTags] = useState(stock?.tags ?? "");
+  const candidates = useMemo(() => {
+    const query = code.trim().toLowerCase();
+    if (!query) return STOCK_MASTER.slice(0, 12);
+    return STOCK_MASTER.filter(
+      (item) => item.code.startsWith(query) || item.name.toLowerCase().includes(query) || item.tags.toLowerCase().includes(query),
+    ).slice(0, 12);
+  }, [code]);
+
+  useEffect(() => {
+    const exact = STOCK_MASTER.find((item) => item.code === code.trim());
+    if (!exact) return;
+    setName(exact.name);
+    setTags(exact.tags);
+  }, [code]);
+
+  function applyCandidate(candidateCode: string) {
+    const candidate = STOCK_MASTER.find((item) => item.code === candidateCode);
+    if (!candidate) return;
+    setCode(candidate.code);
+    setName(candidate.name);
+    setTags(candidate.tags);
+  }
+
   return (
     <form action={upsertStock}>
       <input type="hidden" name="id" value={stock?.id ?? ""} />
       <div className="form-row">
         <label>
           銘柄コード
-          <input name="code" required defaultValue={stock?.code ?? ""} placeholder="7203" />
+          <input
+            name="code"
+            required
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            placeholder="7203"
+            inputMode="numeric"
+            list="stock-code-options"
+          />
         </label>
         <label>
           銘柄名
-          <input name="name" required defaultValue={stock?.name ?? ""} placeholder="トヨタ自動車" />
+          <input name="name" required value={name} onChange={(event) => setName(event.target.value)} placeholder="トヨタ自動車" />
         </label>
       </div>
+      <datalist id="stock-code-options">
+        {candidates.map((candidate) => (
+          <option key={candidate.code} value={candidate.code}>
+            {candidate.name}
+          </option>
+        ))}
+      </datalist>
+      {candidates.length ? (
+        <div className="candidate-list" aria-label="銘柄候補">
+          {candidates.map((candidate) => (
+            <button className="candidate-chip" key={candidate.code} type="button" onClick={() => applyCandidate(candidate.code)}>
+              <span>{candidate.code}</span>
+              <strong>{candidate.name}</strong>
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <p className="muted form-help">候補を選ぶと、銘柄名とタグを自動入力します。</p>
       <div className="form-row">
         <label>
           タグ
-          <input name="tags" defaultValue={stock?.tags ?? ""} placeholder="大型株,AI関連" />
+          <input name="tags" value={tags} onChange={(event) => setTags(event.target.value)} placeholder="大型株,AI関連" />
         </label>
         <label>
           監視状態
@@ -73,4 +129,3 @@ export function StockForm({ stock }: { stock?: Stock }) {
     </form>
   );
 }
-

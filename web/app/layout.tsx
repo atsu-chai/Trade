@@ -19,12 +19,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="ja">
       <body>
         <header className="topbar">
-          <div>
-            <p className="muted" style={{ margin: 0 }}>
-              日本株AIシグナルbot
-            </p>
-            <strong>Trade Signal</strong>
-          </div>
+          <Link className="brand" href={user ? "/dashboard" : "/"}>
+            <span className="brand-mark">TS</span>
+            <span className="brand-copy">
+              <strong>Trade Signal</strong>
+              <span>日本株AIシグナルbot</span>
+            </span>
+          </Link>
           <nav className="nav">
             {user ? (
               <>

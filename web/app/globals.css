@@ -101,21 +101,85 @@ main,
   align-items: center;
   background: rgba(255, 255, 255, 0.92);
   border-bottom: 1px solid var(--line);
+  box-shadow: 0 10px 24px rgba(21, 32, 43, 0.06);
   display: flex;
   justify-content: space-between;
   gap: 18px;
-  padding: 18px max(24px, calc((100vw - 1180px) / 2));
+  min-height: 74px;
+  padding: 12px max(24px, calc((100vw - 1180px) / 2));
   position: sticky;
   top: 0;
   z-index: 10;
   backdrop-filter: blur(10px);
 }
 
+.brand {
+  align-items: center;
+  display: inline-flex;
+  gap: 10px;
+  min-width: 210px;
+  text-decoration: none;
+}
+
+.brand-mark {
+  align-items: center;
+  background: #102a36;
+  border: 1px solid #254858;
+  border-radius: 8px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 900;
+  height: 40px;
+  justify-content: center;
+  letter-spacing: 0;
+  width: 40px;
+}
+
+.brand-copy {
+  display: grid;
+  gap: 1px;
+}
+
+.brand-copy strong {
+  font-size: 16px;
+  line-height: 1.1;
+}
+
+.brand-copy span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .nav {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.nav a {
+  border-radius: 6px;
+  color: #263542;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 9px 10px;
+  text-decoration: none;
+}
+
+.nav a:hover {
+  background: var(--bg-soft);
+}
+
+.nav form {
+  margin: 0;
+}
+
+.nav button,
+.nav .button {
+  padding: 9px 10px;
 }
 
 .panel,
@@ -168,7 +232,7 @@ main,
 }
 
 .page-head {
-  align-items: end;
+  align-items: flex-end;
   display: flex;
   justify-content: space-between;
   gap: 18px;
@@ -181,7 +245,7 @@ main,
 }
 
 .toolbar {
-  align-items: end;
+  align-items: flex-end;
   display: flex;
   gap: 10px;
 }
@@ -310,6 +374,42 @@ article:first-child {
   flex: 1;
 }
 
+.candidate-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -2px 0 10px;
+}
+
+button.candidate-chip {
+  align-items: center;
+  background: #fff;
+  border-color: var(--line);
+  color: var(--text);
+  display: inline-flex;
+  gap: 8px;
+  padding: 7px 9px;
+}
+
+button.candidate-chip:hover {
+  background: var(--bg-soft);
+  border-color: #bac7d3;
+}
+
+.candidate-chip span {
+  color: var(--accent);
+  font-weight: 900;
+}
+
+.candidate-chip strong {
+  font-size: 13px;
+}
+
+.form-help {
+  font-size: 13px;
+  margin: -2px 0 14px;
+}
+
 @media (max-width: 820px) {
   .topbar,
   .page-head,
@@ -327,5 +427,13 @@ article:first-child {
 
   .page-head h1 {
     font-size: 26px;
+  }
+
+  .brand {
+    min-width: 0;
+  }
+
+  .nav {
+    justify-content: flex-start;
   }
 }

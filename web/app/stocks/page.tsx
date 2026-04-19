@@ -44,7 +44,7 @@ export default async function StocksPage({ searchParams }: { searchParams: Promi
                 <th>シグナル</th>
                 <th>スコア</th>
                 <th>状態</th>
-                <th>操作</th>
+                <th>詳細</th>
               </tr>
             </thead>
             <tbody>
@@ -67,7 +67,7 @@ export default async function StocksPage({ searchParams }: { searchParams: Promi
                   <td>
                     <div className="actions">
                       <Link className="button secondary" href={`/stocks/${stock.id}`}>
-                        編集
+                        詳細
                       </Link>
                       <form action={deleteStock}>
                         <input type="hidden" name="id" value={stock.id} />
