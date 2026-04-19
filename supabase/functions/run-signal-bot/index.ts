@@ -41,9 +41,9 @@ const LINE_CHANNEL_ACCESS_TOKEN = Deno.env.get("LINE_CHANNEL_ACCESS_TOKEN") ?? "
 const LINE_TO_USER_ID = Deno.env.get("LINE_TO_USER_ID") ?? "";
 const RUN_SIGNAL_BOT_SECRET = Deno.env.get("RUN_SIGNAL_BOT_SECRET") ?? "";
 const MARKET_DATA_PROVIDER = Deno.env.get("MARKET_DATA_PROVIDER") ?? "jquants";
-const JQUANTS_REFRESH_TOKEN = Deno.env.get("JQUANTS_REFRESH_TOKEN") ?? "";
-const JQUANTS_EMAIL = Deno.env.get("JQUANTS_EMAIL") ?? "";
-const JQUANTS_PASSWORD = Deno.env.get("JQUANTS_PASSWORD") ?? "";
+const JQUANTS_REFRESH_TOKEN = (Deno.env.get("JQUANTS_REFRESH_TOKEN") ?? "").trim();
+const JQUANTS_EMAIL = (Deno.env.get("JQUANTS_EMAIL") ?? "").trim();
+const JQUANTS_PASSWORD = (Deno.env.get("JQUANTS_PASSWORD") ?? "").trim();
 
 function headers(extra: Record<string, string> = {}) {
   return {
@@ -138,17 +138,21 @@ function jquantsCodeCandidates(code: string) {
   return [normalized];
 }
 
+async function getJQuantsIdTokenFromRefreshToken(refreshToken: string) {
+  const response = await fetch(
+    `https://api.jquants.com/v1/token/auth_refresh?refreshtoken=${encodeURIComponent(refreshToken)}`,
+    { method: "POST" },
+  );
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || !body.idToken) {
+    throw new Error(`J-Quants auth_refresh failed: ${response.status} ${JSON.stringify(body)}`);
+  }
+  return String(body.idToken);
+}
+
 async function getJQuantsIdToken() {
   if (JQUANTS_REFRESH_TOKEN) {
-    const response = await fetch(
-      `https://api.jquants.com/v1/token/auth_refresh?refreshtoken=${encodeURIComponent(JQUANTS_REFRESH_TOKEN)}`,
-      { method: "POST" },
-    );
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok || !body.idToken) {
-      throw new Error(`J-Quants auth_refresh failed: ${response.status} ${JSON.stringify(body)}`);
-    }
-    return String(body.idToken);
+    return getJQuantsIdTokenFromRefreshToken(JQUANTS_REFRESH_TOKEN);
   }
 
   if (JQUANTS_EMAIL && JQUANTS_PASSWORD) {
@@ -158,10 +162,10 @@ async function getJQuantsIdToken() {
       body: JSON.stringify({ mailaddress: JQUANTS_EMAIL, password: JQUANTS_PASSWORD }),
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok || !body.idToken) {
+    if (!response.ok || !body.refreshToken) {
       throw new Error(`J-Quants auth_user failed: ${response.status} ${JSON.stringify(body)}`);
     }
-    return String(body.idToken);
+    return getJQuantsIdTokenFromRefreshToken(String(body.refreshToken));
   }
 
   throw new Error("J-Quants credentials are missing. Set JQUANTS_REFRESH_TOKEN or JQUANTS_EMAIL/JQUANTS_PASSWORD.");
