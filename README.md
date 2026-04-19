@@ -114,6 +114,7 @@ web/
 
 ```text
 docs/SUPABASE_VERCEL_SETUP.md
+docs/WEB_DEPLOYMENT.md
 ```
 
 VercelではRoot Directoryを `web` にしてください。
