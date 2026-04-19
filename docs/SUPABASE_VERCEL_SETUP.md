@@ -103,6 +103,27 @@ npx supabase secrets set LINE_TO_USER_ID="実際のLINEユーザーID"
 npx supabase secrets set RUN_SIGNAL_BOT_SECRET="$RUN_SIGNAL_BOT_SECRET"
 ```
 
+J-Quants APIで実際の日足株価を取得するには、Supabase SecretsにJ-Quants認証情報も設定します。
+
+常時運用ではメールアドレスとパスワードを使う構成が扱いやすいです。
+
+```bash
+npx supabase secrets set JQUANTS_EMAIL="J-Quantsのメールアドレス"
+npx supabase secrets set JQUANTS_PASSWORD="J-Quantsのパスワード"
+```
+
+リフレッシュトークンを使う場合は以下です。ただし有効期限があるため、期限切れ時は更新が必要です。
+
+```bash
+npx supabase secrets set JQUANTS_REFRESH_TOKEN="J-Quantsのリフレッシュトークン"
+```
+
+J-Quantsを使う場合、`MARKET_DATA_PROVIDER` は未設定のままで構いません。未設定時は `jquants` として動きます。デモ用サンプルデータに戻す場合だけ以下を設定してください。
+
+```bash
+npx supabase secrets set MARKET_DATA_PROVIDER="sample"
+```
+
 ## 5. Edge Functionをデプロイする
 
 ```bash

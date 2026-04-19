@@ -20,11 +20,30 @@ type Candle = {
 
 type Indicators = Record<string, number | null>;
 
+type JQuantsQuote = {
+  Date: string;
+  Code: string;
+  Open: number | null;
+  High: number | null;
+  Low: number | null;
+  Close: number | null;
+  Volume: number | null;
+  AdjustmentOpen: number | null;
+  AdjustmentHigh: number | null;
+  AdjustmentLow: number | null;
+  AdjustmentClose: number | null;
+  AdjustmentVolume: number | null;
+};
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const LINE_CHANNEL_ACCESS_TOKEN = Deno.env.get("LINE_CHANNEL_ACCESS_TOKEN") ?? "";
 const LINE_TO_USER_ID = Deno.env.get("LINE_TO_USER_ID") ?? "";
 const RUN_SIGNAL_BOT_SECRET = Deno.env.get("RUN_SIGNAL_BOT_SECRET") ?? "";
+const MARKET_DATA_PROVIDER = Deno.env.get("MARKET_DATA_PROVIDER") ?? "jquants";
+const JQUANTS_REFRESH_TOKEN = Deno.env.get("JQUANTS_REFRESH_TOKEN") ?? "";
+const JQUANTS_EMAIL = Deno.env.get("JQUANTS_EMAIL") ?? "";
+const JQUANTS_PASSWORD = Deno.env.get("JQUANTS_PASSWORD") ?? "";
 
 function headers(extra: Record<string, string> = {}) {
   return {
@@ -94,6 +113,111 @@ function sampleCandles(stock: Stock): Candle[] {
 
 function round(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+function formatDate(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function jquantsDate(date: string) {
+  return `${date}T00:00:00+09:00`;
+}
+
+function numberOrNull(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+async function getJQuantsIdToken() {
+  if (JQUANTS_REFRESH_TOKEN) {
+    const response = await fetch(
+      `https://api.jquants.com/v1/token/auth_refresh?refreshtoken=${encodeURIComponent(JQUANTS_REFRESH_TOKEN)}`,
+      { method: "POST" },
+    );
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !body.idToken) {
+      throw new Error(`J-Quants auth_refresh failed: ${response.status} ${JSON.stringify(body)}`);
+    }
+    return String(body.idToken);
+  }
+
+  if (JQUANTS_EMAIL && JQUANTS_PASSWORD) {
+    const response = await fetch("https://api.jquants.com/v1/token/auth_user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mailaddress: JQUANTS_EMAIL, password: JQUANTS_PASSWORD }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !body.idToken) {
+      throw new Error(`J-Quants auth_user failed: ${response.status} ${JSON.stringify(body)}`);
+    }
+    return String(body.idToken);
+  }
+
+  throw new Error("J-Quants credentials are missing. Set JQUANTS_REFRESH_TOKEN or JQUANTS_EMAIL/JQUANTS_PASSWORD.");
+}
+
+async function fetchJQuantsCandles(stock: Stock, idToken: string): Promise<Candle[]> {
+  const to = new Date();
+  const from = new Date(to.getTime() - 420 * 24 * 60 * 60 * 1000);
+  const params = new URLSearchParams({
+    code: stock.code.trim(),
+    from: formatDate(from),
+    to: formatDate(to),
+  });
+  const quotes: JQuantsQuote[] = [];
+  let paginationKey = "";
+
+  do {
+    if (paginationKey) params.set("pagination_key", paginationKey);
+    const response = await fetch(`https://api.jquants.com/v1/prices/daily_quotes?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${idToken}` },
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(`J-Quants daily_quotes failed for ${stock.code}: ${response.status} ${JSON.stringify(body)}`);
+    }
+    quotes.push(...((body.daily_quotes ?? []) as JQuantsQuote[]));
+    paginationKey = String(body.pagination_key ?? "");
+  } while (paginationKey);
+
+  const candles = quotes
+    .map((quote) => {
+      const open = numberOrNull(quote.AdjustmentOpen) ?? numberOrNull(quote.Open);
+      const high = numberOrNull(quote.AdjustmentHigh) ?? numberOrNull(quote.High);
+      const low = numberOrNull(quote.AdjustmentLow) ?? numberOrNull(quote.Low);
+      const close = numberOrNull(quote.AdjustmentClose) ?? numberOrNull(quote.Close);
+      const volume = numberOrNull(quote.AdjustmentVolume) ?? numberOrNull(quote.Volume);
+      if (open === null || high === null || low === null || close === null || volume === null) return null;
+      return {
+        ts: jquantsDate(quote.Date),
+        open: round(open),
+        high: round(high),
+        low: round(low),
+        close: round(close),
+        volume: Math.round(volume),
+      };
+    })
+    .filter((candle): candle is Candle => candle !== null)
+    .sort((a, b) => a.ts.localeCompare(b.ts));
+
+  if (candles.length === 0) {
+    throw new Error(`J-Quants returned no usable daily quotes for ${stock.code}. Check the issue code and plan availability.`);
+  }
+
+  return candles;
+}
+
+async function getMarketCandles(stock: Stock, idToken: string | null) {
+  if (MARKET_DATA_PROVIDER === "sample") {
+    return sampleCandles(stock);
+  }
+  if (MARKET_DATA_PROVIDER !== "jquants") {
+    throw new Error(`Unsupported MARKET_DATA_PROVIDER: ${MARKET_DATA_PROVIDER}`);
+  }
+  if (!idToken) {
+    throw new Error("J-Quants ID token is missing.");
+  }
+  return fetchJQuantsCandles(stock, idToken);
 }
 
 function sma(values: number[], period: number) {
@@ -352,9 +476,10 @@ Deno.serve(async (request) => {
       return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
     }
     const stocks = await supabase("stocks?select=*&watch_status=neq.stopped&order=code.asc") as Stock[];
+    const idToken = MARKET_DATA_PROVIDER === "jquants" ? await getJQuantsIdToken() : null;
     let notificationCount = 0;
     for (const stock of stocks) {
-      const candles = sampleCandles(stock);
+      const candles = await getMarketCandles(stock, idToken);
       await supabase("price_candles?on_conflict=stock_id,timeframe,ts", {
         method: "POST",
         headers: { Prefer: "resolution=merge-duplicates" },
@@ -378,7 +503,7 @@ Deno.serve(async (request) => {
         vwap: indicators.vwap,
         volume_ratio: indicators.volume_ratio,
         liquidity_value: indicators.liquidity_value,
-        raw_json: indicators,
+        raw_json: { ...indicators, market_data_provider: MARKET_DATA_PROVIDER, latest_candle_at: candles.at(-1)?.ts ?? null },
         calculated_at: new Date().toISOString(),
       };
       await supabase("technical_indicators?on_conflict=stock_id", {

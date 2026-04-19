@@ -38,7 +38,7 @@ export default async function StocksPage({ searchParams }: { searchParams: Promi
               <tr>
                 <th>コード</th>
                 <th>銘柄名</th>
-                <th>現在値</th>
+                <th>最新終値</th>
                 <th>前日比</th>
                 <th>出来高倍率</th>
                 <th>シグナル</th>

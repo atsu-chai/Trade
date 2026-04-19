@@ -38,6 +38,8 @@ RUN_SIGNAL_BOT_SECRET=Supabase Edge Functionに設定したRUN_SIGNAL_BOT_SECRET
 `NEXT_PUBLIC_SITE_URL` は初回デプロイ後にVercel URLが分かってから設定して、再デプロイしてください。
 `RUN_SIGNAL_BOT_SECRET` はWeb画面からBot手動実行とLINEテストを行うために必要です。ブラウザには公開されません。
 
+J-Quantsの認証情報はVercelではなく、Supabase Edge Function側のSecretsに設定します。Vercelには置きません。
+
 ## 4. Supabase Auth Redirect URL
 
 Supabase Dashboardで以下を追加します。

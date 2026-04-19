@@ -71,7 +71,7 @@ export default async function DashboardPage() {
                   <th>銘柄</th>
                   <th>シグナル</th>
                   <th>スコア</th>
-                  <th>現在値</th>
+                  <th>最新終値</th>
                 </tr>
               </thead>
               <tbody>
