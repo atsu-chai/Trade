@@ -290,6 +290,15 @@ article:first-child {
   font-weight: 800;
 }
 
+.chart {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: block;
+  min-height: 240px;
+  width: 100%;
+}
+
 .form-row,
 .actions {
   align-items: center;

@@ -19,6 +19,9 @@ export type BacktestTrade = {
 
 export type BacktestResult = {
   trades: BacktestTrade[];
+  startDate: string | null;
+  endDate: string | null;
+  candleCount: number;
   winRate: number;
   averageProfitPct: number;
   averageLossPct: number;
@@ -140,6 +143,9 @@ export function runBacktest(candles: Candle[]): BacktestResult {
 
   return {
     trades,
+    startDate: normalized[0]?.ts ?? null,
+    endDate: normalized.at(-1)?.ts ?? null,
+    candleCount: normalized.length,
     winRate: trades.length ? (wins.length / trades.length) * 100 : 0,
     averageProfitPct: average(wins.map((trade) => trade.returnPct)),
     averageLossPct: average(losses.map((trade) => trade.returnPct)),
@@ -148,4 +154,3 @@ export function runBacktest(candles: Candle[]): BacktestResult {
     profitFactor: grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0,
   };
 }
-

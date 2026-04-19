@@ -61,9 +61,9 @@ function sampleCandles(stock: Stock): Candle[] {
   let price = 120 + (seed % 2400);
   const candles: Candle[] = [];
   const today = new Date();
-  const current = new Date(today.getTime() - 140 * 24 * 60 * 60 * 1000);
+  const current = new Date(today.getTime() - 420 * 24 * 60 * 60 * 1000);
   let index = 0;
-  while (candles.length < 100) {
+  while (candles.length < 260) {
     if (current.getUTCDay() !== 0 && current.getUTCDay() !== 6) {
       const wave = Math.sin((seed + index * 17) / 11) * 0.025;
       const drift = (seed % 7) / 10000;
