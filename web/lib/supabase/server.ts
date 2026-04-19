@@ -1,10 +1,20 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
+type CookieOptions = {
+  domain?: string;
+  expires?: Date;
+  httpOnly?: boolean;
+  maxAge?: number;
+  path?: string;
+  sameSite?: boolean | "lax" | "strict" | "none";
+  secure?: boolean;
+};
+
 type CookieToSet = {
   name: string;
   value: string;
-  options?: Parameters<ReturnType<typeof cookies> extends Promise<infer T> ? T["set"] : never>[2];
+  options?: CookieOptions;
 };
 
 export async function createClient() {
