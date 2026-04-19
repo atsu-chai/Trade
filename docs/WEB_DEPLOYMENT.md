@@ -32,9 +32,11 @@ Vercel Project Settings → Environment Variables に設定します。
 NEXT_PUBLIC_SUPABASE_URL=https://brdlwwoyunxvigkaxhav.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=Supabaseのanon public key
 NEXT_PUBLIC_SITE_URL=https://Vercelで発行されたURL
+RUN_SIGNAL_BOT_SECRET=Supabase Edge Functionに設定したRUN_SIGNAL_BOT_SECRET
 ```
 
 `NEXT_PUBLIC_SITE_URL` は初回デプロイ後にVercel URLが分かってから設定して、再デプロイしてください。
+`RUN_SIGNAL_BOT_SECRET` はWeb画面からBot手動実行とLINEテストを行うために必要です。ブラウザには公開されません。
 
 ## 4. Supabase Auth Redirect URL
 
@@ -73,4 +75,3 @@ https://Vercelで発行されたURL/api/health
 Vercel Project Settings → Domains で設定します。
 
 独自ドメインを使った場合も、Supabase AuthのSite URLとRedirect URLsを独自ドメインに更新してください。
-

@@ -51,6 +51,7 @@ Supabase DashboardのSQL Editorで以下を順番に実行します。
 
 1. `supabase/migrations/001_initial_schema.sql`
 2. `supabase/migrations/002_schedule_signal_bot.sql` は中のコメントを編集してから実行
+3. `supabase/migrations/003_mvp_completion.sql`
 
 `002_schedule_signal_bot.sql` は `REPLACE_WITH_RUN_SIGNAL_BOT_SECRET` を実値に置き換えてください。
 
@@ -150,9 +151,11 @@ Vercel Project Settings → Environment Variables:
 NEXT_PUBLIC_SUPABASE_URL=https://brdlwwoyunxvigkaxhav.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 NEXT_PUBLIC_SITE_URL=https://YOUR_VERCEL_DOMAIN.vercel.app
+RUN_SIGNAL_BOT_SECRET=...
 ```
 
 Web画面はAnonキー + RLSで動きます。Service role keyはVercelのブラウザ側に出さないでください。
+`RUN_SIGNAL_BOT_SECRET` はWeb画面の「設定」からBot手動実行とLINEテストを呼ぶためにVercelサーバー側だけで使います。
 
 ## 7. Vercelにデプロイする
 
@@ -171,3 +174,15 @@ Output Directory: .next
 - 実運用前に実データProviderへ差し替えてください。
 - Googleログインは使いません。
 - LINE通知は `should_notify = true` のシグナルだけ送信します。
+
+## 9. MVP画面
+
+```text
+/dashboard       ダッシュボード
+/stocks          銘柄管理
+/stocks/[id]     銘柄詳細、チャート、指標、編集
+/signals         シグナル履歴
+/notifications   LINE通知履歴
+/runs            Bot実行履歴
+/settings        手動実行、LINEテスト、設定確認
+```

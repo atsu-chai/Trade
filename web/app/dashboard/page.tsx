@@ -10,10 +10,11 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: stocks }, { data: signals }, { data: notifications }] = await Promise.all([
+  const [{ data: stocks }, { data: signals }, { data: notifications }, { data: runs }] = await Promise.all([
     supabase.from("latest_stock_signals").select("*").order("score", { ascending: false, nullsFirst: false }).limit(10),
     supabase.from("signals").select("*, stocks(code,name)").order("id", { ascending: false }).limit(10),
     supabase.from("notification_history").select("*, stocks(code,name)").order("id", { ascending: false }).limit(8),
+    supabase.from("bot_runs").select("*").order("id", { ascending: false }).limit(1),
   ]);
 
   const buyCount = signals?.filter((signal) => signal.signal_type === "買い候補").length ?? 0;
@@ -42,6 +43,10 @@ export default async function DashboardPage() {
         <div className="metric">
           <span className="muted">撤退系</span>
           <b>{cutCount}</b>
+        </div>
+        <div className="metric">
+          <span className="muted">最終実行</span>
+          <b style={{ fontSize: 16 }}>{runs?.[0]?.created_at ? new Date(runs[0].created_at).toLocaleString("ja-JP") : "-"}</b>
         </div>
       </section>
 
@@ -97,4 +102,3 @@ export default async function DashboardPage() {
     </main>
   );
 }
-

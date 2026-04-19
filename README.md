@@ -136,6 +136,18 @@ curl -X POST \
   -H 'x-bot-secret: YOUR_RUN_SIGNAL_BOT_SECRET'
 ```
 
+MVP画面:
+
+```text
+/dashboard       ダッシュボード
+/stocks          銘柄管理
+/stocks/[id]     銘柄詳細、チャート、指標、編集
+/signals         シグナル履歴
+/notifications   LINE通知履歴
+/runs            Bot実行履歴
+/settings        手動実行、LINEテスト、設定確認
+```
+
 ## 実データ連携について
 
 現時点の `SampleMarketDataProvider` はデモ用データを生成します。SBI証券、kabuステーションAPI、有料マーケットデータAPIなどに接続する場合は、`app/services.py` の `MarketDataProvider` を実装差し替えしてください。
