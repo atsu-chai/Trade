@@ -60,6 +60,18 @@ type LatestQuote = {
   ts: string;
 };
 
+type SummaryRow = {
+  stockId: number;
+  code: string;
+  name: string;
+  price: number | null;
+  changePct: number | null;
+  score: number;
+  signalType: string;
+  strength: string;
+  riskLevel: string;
+};
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const LINE_CHANNEL_ACCESS_TOKEN = Deno.env.get("LINE_CHANNEL_ACCESS_TOKEN") ?? "";
@@ -634,6 +646,46 @@ async function sendLine(message: string) {
   return { status: "sent", error: null };
 }
 
+function formatPercent(value: number | null) {
+  if (value === null || Number.isNaN(value)) return "-";
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${round(value)}%`;
+}
+
+function buildSummaryMessages(rows: SummaryRow[]) {
+  const now = new Date().toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
+  const sorted = [...rows].sort((a, b) => b.score - a.score);
+  const chunks: SummaryRow[][] = [];
+  for (let index = 0; index < sorted.length; index += 12) {
+    chunks.push(sorted.slice(index, index + 12));
+  }
+  return chunks.map((chunk, index) => {
+    const body = chunk
+      .map((row, rowIndex) => {
+        const rank = index * 12 + rowIndex + 1;
+        const price = row.price === null ? "-" : `${round(row.price)}円`;
+        return `${rank}. ${row.code} ${row.name}\n${row.signalType} / ${row.score}点 / ${row.strength} / リスク:${row.riskLevel}\n価格:${price} 前日比:${formatPercent(row.changePct)}`;
+      })
+      .join("\n\n");
+    const suffix = chunks.length > 1 ? ` (${index + 1}/${chunks.length})` : "";
+    return `【日本株AIシグナルbot 定期サマリー${suffix}】\n${now}\n登録銘柄: ${rows.length}件\n\n${body}`;
+  });
+}
+
+async function sendSummaryNotifications(rows: SummaryRow[]) {
+  if (rows.length === 0) return { sent: 0, status: "skipped", error: "No stocks processed." };
+  let sent = 0;
+  let lastStatus = "skipped";
+  let lastError: string | null = null;
+  for (const message of buildSummaryMessages(rows)) {
+    const result = await sendLine(message);
+    lastStatus = result.status;
+    lastError = result.error;
+    if (result.status === "sent") sent += 1;
+  }
+  return { sent, status: lastStatus, error: lastError };
+}
+
 async function shouldSkipNotification(stockId: number, signature: string) {
   const existing = await supabase(`notification_state?stock_id=eq.${stockId}&select=signature`) as Array<{ signature: string }>;
   return existing[0]?.signature === signature;
@@ -658,6 +710,7 @@ Deno.serve(async (request) => {
     const stocks = await supabase("stocks?select=*&watch_status=neq.stopped&order=code.asc") as Stock[];
     const idToken = MARKET_DATA_PROVIDER === "jquants" ? await getJQuantsIdToken() : null;
     let notificationCount = 0;
+    const summaryRows: SummaryRow[] = [];
     for (const stock of stocks) {
       const candles = await getMarketCandles(stock, idToken);
       const latestQuote = MARKET_DATA_PROVIDER === "yahoo" ? await fetchYahooLatestQuote(stock) : null;
@@ -698,6 +751,17 @@ Deno.serve(async (request) => {
         body: JSON.stringify([indicatorRow]),
       });
       const signal = generateSignal(stock, indicators);
+      summaryRows.push({
+        stockId: stock.id,
+        code: stock.code,
+        name: stock.name,
+        price: indicators.latest_close,
+        changePct: indicators.price_change_pct,
+        score: signal.score,
+        signalType: signal.signal_type,
+        strength: signal.strength,
+        riskLevel: signal.risk_level,
+      });
       const inserted = await supabase("signals", {
         method: "POST",
         headers: { Prefer: "return=representation" },
@@ -722,6 +786,19 @@ Deno.serve(async (request) => {
           notificationCount += 1;
         }
       }
+    }
+    const summaryResult = await sendSummaryNotifications(summaryRows);
+    notificationCount += summaryResult.sent;
+    if (summaryRows[0]) {
+      await supabase("notification_history", {
+        method: "POST",
+        body: JSON.stringify([{
+          stock_id: summaryRows[0].stockId,
+          status: summaryResult.status,
+          message: `定期サマリー: ${summaryRows.length}件`,
+          error: summaryResult.error,
+        }]),
+      });
     }
     await supabase("bot_runs", {
       method: "POST",

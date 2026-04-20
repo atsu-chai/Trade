@@ -50,10 +50,11 @@ Dockerは `supabase start` でローカルSupabase一式を起動する場合に
 Supabase DashboardのSQL Editorで以下を順番に実行します。
 
 1. `supabase/migrations/001_initial_schema.sql`
-2. `supabase/migrations/002_schedule_signal_bot.sql` は中のコメントを編集してから実行
-3. `supabase/migrations/003_mvp_completion.sql`
+2. `supabase/migrations/003_mvp_completion.sql`
+3. `supabase/migrations/004_latest_stock_signal_dates.sql`
+4. `supabase/migrations/005_schedule_daily_summary.sql` は中のコメントを編集してから実行
 
-`002_schedule_signal_bot.sql` は `REPLACE_WITH_RUN_SIGNAL_BOT_SECRET` を実値に置き換えてください。
+`005_schedule_daily_summary.sql` は `REPLACE_WITH_RUN_SIGNAL_BOT_SECRET` を実値に置き換えてください。朝9時・夜9時にBotを実行し、登録銘柄の価格・シグナル・スコアをLINEへまとめて通知します。
 
 ## 2. 利用メールを許可する
 
@@ -201,10 +202,9 @@ Output Directory: .next
 
 ## 8. 現時点の制限
 
-- Edge Functionの株価データはまだサンプル生成です。
-- 実運用前に実データProviderへ差し替えてください。
+- 既定の株価ProviderはYahoo Financeです。日中価格はYahoo Financeから取得できる最新値です。
 - Googleログインは使いません。
-- LINE通知は `should_notify = true` のシグナルだけ送信します。
+- LINE通知は朝9時・夜9時の登録銘柄サマリーに加え、強い個別シグナルも送信します。
 
 ## 9. MVP画面
 
