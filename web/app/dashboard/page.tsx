@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { fetchLiveQuoteMap } from "@/lib/live-quotes";
 import { badgeClass, formatNumber } from "@/lib/ui";
 
 export default async function DashboardPage() {
@@ -16,6 +17,7 @@ export default async function DashboardPage() {
     supabase.from("notification_history").select("*, stocks(code,name)").order("id", { ascending: false }).limit(8),
     supabase.from("bot_runs").select("*").order("id", { ascending: false }).limit(1),
   ]);
+  const liveQuotes = await fetchLiveQuoteMap((stocks ?? []).map((stock) => stock.code));
 
   const buyCount = signals?.filter((signal) => signal.signal_type === "買い候補").length ?? 0;
   const sellCount = signals?.filter((signal) => signal.signal_type === "利確売り候補").length ?? 0;
@@ -76,18 +78,27 @@ export default async function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {(stocks ?? []).map((stock) => (
-                  <tr key={stock.id}>
-                    <td>{stock.code}</td>
-                    <td>{stock.name}</td>
-                    <td>
-                      <span className={`badge ${badgeClass(stock.signal_type)}`}>{stock.signal_type ?? "-"}</span>
-                    </td>
-                    <td>{stock.score ?? "-"}</td>
-                    <td>{formatNumber(stock.latest_close)}</td>
-                    <td>{stock.last_data_at ? new Date(stock.last_data_at).toLocaleString("ja-JP") : "-"}</td>
-                  </tr>
-                ))}
+                {(stocks ?? []).map((stock) => {
+                  const live = liveQuotes.get(stock.code);
+                  return (
+                    <tr key={stock.id}>
+                      <td>{stock.code}</td>
+                      <td>{stock.name}</td>
+                      <td>
+                        <span className={`badge ${badgeClass(stock.signal_type)}`}>{stock.signal_type ?? "-"}</span>
+                      </td>
+                      <td>{stock.score ?? "-"}</td>
+                      <td>{formatNumber(live?.price ?? stock.latest_close)}</td>
+                      <td>
+                        {live?.fetchedAt
+                          ? new Date(live.fetchedAt).toLocaleString("ja-JP")
+                          : stock.last_data_at
+                            ? new Date(stock.last_data_at).toLocaleString("ja-JP")
+                            : "-"}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div> : <div className="empty">銘柄を登録し、Botを実行するとここに表示されます。</div>}

@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { CandlestickChart } from "@/components/candlestick-chart";
 import { StockForm } from "@/components/stock-form";
+import { fetchLiveQuote } from "@/lib/live-quotes";
 import { createClient } from "@/lib/supabase/server";
 import { badgeClass, formatNumber } from "@/lib/ui";
 
@@ -19,6 +20,7 @@ export default async function EditStockPage({ params }: { params: Promise<{ id: 
     supabase.from("signals").select("*").eq("stock_id", id).order("id", { ascending: false }).limit(20),
   ]);
   if (!stock) notFound();
+  const liveQuote = await fetchLiveQuote(stock.code);
 
   return (
     <main>
@@ -38,7 +40,8 @@ export default async function EditStockPage({ params }: { params: Promise<{ id: 
           <div className="grid two" style={{ marginTop: 18 }}>
             <div>
               <strong>最新価格</strong>
-              <p>{formatNumber(indicators?.latest_close)}</p>
+              <p>{formatNumber(liveQuote?.price ?? indicators?.latest_close)}</p>
+              <p className="muted">{liveQuote?.fetchedAt ? new Date(liveQuote.fetchedAt).toLocaleString("ja-JP") : "DB保存値"}</p>
             </div>
             <div>
               <strong>出来高倍率</strong>

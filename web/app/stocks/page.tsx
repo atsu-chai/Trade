@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { deleteStock } from "@/app/actions";
 import { createClient } from "@/lib/supabase/server";
+import { fetchLiveQuoteMap } from "@/lib/live-quotes";
 import { badgeClass, formatNumber, watchStatusLabel } from "@/lib/ui";
 
 export default async function StocksPage({ searchParams }: { searchParams: Promise<{ message?: string }> }) {
@@ -16,6 +17,7 @@ export default async function StocksPage({ searchParams }: { searchParams: Promi
     .from("latest_stock_signals")
     .select("*")
     .order("score", { ascending: false, nullsFirst: false });
+  const liveQuotes = await fetchLiveQuoteMap((stocks ?? []).map((stock) => stock.code));
 
   return (
     <main>
@@ -49,36 +51,45 @@ export default async function StocksPage({ searchParams }: { searchParams: Promi
               </tr>
             </thead>
             <tbody>
-              {(stocks ?? []).map((stock) => (
-                <tr key={stock.id}>
-                  <td>{stock.code}</td>
-                  <td>
-                    <strong>{stock.name}</strong>
-                    <br />
-                    <small>{stock.tags}</small>
-                  </td>
-                  <td>{formatNumber(stock.latest_close)}</td>
-                  <td>{stock.last_data_at ? new Date(stock.last_data_at).toLocaleString("ja-JP") : "-"}</td>
-                  <td>{formatNumber(stock.price_change_pct)}%</td>
-                  <td>{formatNumber(stock.volume_ratio)}倍</td>
-                  <td>
-                    <span className={`badge ${badgeClass(stock.signal_type)}`}>{stock.signal_type ?? "-"}</span>
-                  </td>
-                  <td>{stock.score ?? "-"}</td>
-                  <td>{watchStatusLabel(stock.watch_status)}</td>
-                  <td>
-                    <div className="actions">
-                      <Link className="button secondary" href={`/stocks/${stock.id}`}>
-                        詳細
-                      </Link>
-                      <form action={deleteStock}>
-                        <input type="hidden" name="id" value={stock.id} />
-                        <button className="danger">削除</button>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {(stocks ?? []).map((stock) => {
+                const live = liveQuotes.get(stock.code);
+                return (
+                  <tr key={stock.id}>
+                    <td>{stock.code}</td>
+                    <td>
+                      <strong>{stock.name}</strong>
+                      <br />
+                      <small>{stock.tags}</small>
+                    </td>
+                    <td>{formatNumber(live?.price ?? stock.latest_close)}</td>
+                    <td>
+                      {live?.fetchedAt
+                        ? new Date(live.fetchedAt).toLocaleString("ja-JP")
+                        : stock.last_data_at
+                          ? new Date(stock.last_data_at).toLocaleString("ja-JP")
+                          : "-"}
+                    </td>
+                    <td>{formatNumber(live?.changePct ?? stock.price_change_pct)}%</td>
+                    <td>{formatNumber(stock.volume_ratio)}倍</td>
+                    <td>
+                      <span className={`badge ${badgeClass(stock.signal_type)}`}>{stock.signal_type ?? "-"}</span>
+                    </td>
+                    <td>{stock.score ?? "-"}</td>
+                    <td>{watchStatusLabel(stock.watch_status)}</td>
+                    <td>
+                      <div className="actions">
+                        <Link className="button secondary" href={`/stocks/${stock.id}`}>
+                          詳細
+                        </Link>
+                        <form action={deleteStock}>
+                          <input type="hidden" name="id" value={stock.id} />
+                          <button className="danger">削除</button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div> : <div className="empty">まだ銘柄がありません。最初の監視銘柄を追加してください。</div>}
