@@ -52,9 +52,9 @@ Supabase DashboardのSQL Editorで以下を順番に実行します。
 1. `supabase/migrations/001_initial_schema.sql`
 2. `supabase/migrations/003_mvp_completion.sql`
 3. `supabase/migrations/004_latest_stock_signal_dates.sql`
-4. `supabase/migrations/005_schedule_daily_summary.sql` は中のコメントを編集してから実行
+4. `supabase/migrations/006_schedule_refresh_and_summary.sql` は中のコメントを編集してから実行
 
-`005_schedule_daily_summary.sql` は `REPLACE_WITH_RUN_SIGNAL_BOT_SECRET` を実値に置き換えてください。朝9時・夜9時にBotを実行し、登録銘柄の価格・シグナル・スコアをLINEへまとめて通知します。
+`006_schedule_refresh_and_summary.sql` は `REPLACE_WITH_RUN_SIGNAL_BOT_SECRET` を実値に置き換えてください。15分ごとに更新・分析し、朝9時・夜9時に登録銘柄の価格・シグナル・スコアをLINEへまとめて通知します。
 
 ## 2. 利用メールを許可する
 

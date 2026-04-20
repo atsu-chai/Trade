@@ -5,6 +5,8 @@ import { fetchLiveQuote } from "@/lib/live-quotes";
 import { createClient } from "@/lib/supabase/server";
 import { badgeClass, formatNumber } from "@/lib/ui";
 
+export const dynamic = "force-dynamic";
+
 export default async function EditStockPage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
   const {

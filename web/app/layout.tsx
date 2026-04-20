@@ -3,6 +3,7 @@ import Link from "next/link";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions";
+import { AutoRefresh } from "@/components/auto-refresh";
 
 export const metadata: Metadata = {
   title: "日本株AIシグナルbot",
@@ -18,6 +19,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="ja">
       <body>
+        {user ? <AutoRefresh /> : null}
         <header className="topbar">
           <Link className="brand" href={user ? "/dashboard" : "/"}>
             <span className="brand-mark">TS</span>

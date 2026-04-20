@@ -72,6 +72,10 @@ type SummaryRow = {
   riskLevel: string;
 };
 
+type BotRequest = {
+  notify_summary?: boolean;
+};
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const LINE_CHANNEL_ACCESS_TOKEN = Deno.env.get("LINE_CHANNEL_ACCESS_TOKEN") ?? "";
@@ -707,6 +711,8 @@ Deno.serve(async (request) => {
     if (RUN_SIGNAL_BOT_SECRET && request.headers.get("x-bot-secret") !== RUN_SIGNAL_BOT_SECRET) {
       return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
     }
+    const requestBody = await request.json().catch(() => ({})) as BotRequest;
+    const notifySummary = requestBody.notify_summary !== false;
     const stocks = await supabase("stocks?select=*&watch_status=neq.stopped&order=code.asc") as Stock[];
     const idToken = MARKET_DATA_PROVIDER === "jquants" ? await getJQuantsIdToken() : null;
     let notificationCount = 0;
@@ -787,9 +793,9 @@ Deno.serve(async (request) => {
         }
       }
     }
-    const summaryResult = await sendSummaryNotifications(summaryRows);
-    notificationCount += summaryResult.sent;
-    if (summaryRows[0]) {
+    if (notifySummary && summaryRows[0]) {
+      const summaryResult = await sendSummaryNotifications(summaryRows);
+      notificationCount += summaryResult.sent;
       await supabase("notification_history", {
         method: "POST",
         body: JSON.stringify([{

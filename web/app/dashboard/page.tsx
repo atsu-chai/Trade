@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchLiveQuoteMap } from "@/lib/live-quotes";
 import { badgeClass, formatNumber } from "@/lib/ui";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {

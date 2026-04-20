@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchLiveQuoteMap } from "@/lib/live-quotes";
 import { badgeClass, formatNumber, watchStatusLabel } from "@/lib/ui";
 
+export const dynamic = "force-dynamic";
+
 export default async function StocksPage({ searchParams }: { searchParams: Promise<{ message?: string }> }) {
   const supabase = await createClient();
   const {
