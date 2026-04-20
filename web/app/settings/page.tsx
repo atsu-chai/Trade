@@ -24,7 +24,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <section className="grid two">
         <div className="panel">
           <h1>手動実行</h1>
-          <p className="muted">Cronを待たずに、J-Quantsの日足データで登録銘柄をすぐ分析します。</p>
+          <p className="muted">Cronを待たずに、Yahoo Financeの日足データで登録銘柄をすぐ分析します。</p>
           <form action="/api/run-bot" method="POST">
             <button type="submit">Botを今すぐ実行</button>
           </form>
@@ -44,8 +44,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       </section>
 
       <section className="notice" style={{ marginTop: 18 }}>
-        実株価取得にはSupabase Edge Function側のSecretsに `JQUANTS_EMAIL` / `JQUANTS_PASSWORD`
-        または `JQUANTS_REFRESH_TOKEN` が必要です。J-Quantsは日足データProviderのため、表示価格は最新取得済み日足の終値です。
+        既定の価格Providerは `yahoo` です。表示価格は最新取得済み日足の終値です。J-Quantsを使う場合のみ、
+        Supabase Edge Function側のSecretsに `JQUANTS_EMAIL` / `JQUANTS_PASSWORD` または `JQUANTS_REFRESH_TOKEN` が必要です。
       </section>
 
       <section className="panel" style={{ marginTop: 18 }}>

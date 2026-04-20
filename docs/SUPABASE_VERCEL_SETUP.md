@@ -103,7 +103,17 @@ npx supabase secrets set LINE_TO_USER_ID="実際のLINEユーザーID"
 npx supabase secrets set RUN_SIGNAL_BOT_SECRET="$RUN_SIGNAL_BOT_SECRET"
 ```
 
-J-Quants APIで実際の日足株価を取得するには、Supabase SecretsにJ-Quants認証情報も設定します。
+既定ではYahoo Financeの日足データを使います。J-Quants認証情報は不要です。明示する場合は以下を設定します。
+
+```bash
+npx supabase secrets set MARKET_DATA_PROVIDER="yahoo"
+```
+
+J-Quants APIを使う場合だけ、Supabase SecretsにProviderとJ-Quants認証情報を設定します。
+
+```bash
+npx supabase secrets set MARKET_DATA_PROVIDER="jquants"
+```
 
 常時運用ではメールアドレスとパスワードを使う構成が扱いやすいです。
 
@@ -118,7 +128,7 @@ npx supabase secrets set JQUANTS_PASSWORD="J-Quantsのパスワード"
 npx supabase secrets set JQUANTS_REFRESH_TOKEN="J-Quantsのリフレッシュトークン"
 ```
 
-J-Quantsを使う場合、`MARKET_DATA_PROVIDER` は未設定のままで構いません。未設定時は `jquants` として動きます。デモ用サンプルデータに戻す場合だけ以下を設定してください。
+デモ用サンプルデータに戻す場合だけ以下を設定してください。
 
 ```bash
 npx supabase secrets set MARKET_DATA_PROVIDER="sample"

@@ -35,12 +35,25 @@ type JQuantsQuote = {
   AdjustmentVolume: number | null;
 };
 
+type YahooChartResult = {
+  timestamp?: number[];
+  indicators?: {
+    quote?: Array<{
+      open?: Array<number | null>;
+      high?: Array<number | null>;
+      low?: Array<number | null>;
+      close?: Array<number | null>;
+      volume?: Array<number | null>;
+    }>;
+  };
+};
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const LINE_CHANNEL_ACCESS_TOKEN = Deno.env.get("LINE_CHANNEL_ACCESS_TOKEN") ?? "";
 const LINE_TO_USER_ID = Deno.env.get("LINE_TO_USER_ID") ?? "";
 const RUN_SIGNAL_BOT_SECRET = Deno.env.get("RUN_SIGNAL_BOT_SECRET") ?? "";
-const MARKET_DATA_PROVIDER = Deno.env.get("MARKET_DATA_PROVIDER") ?? "jquants";
+const MARKET_DATA_PROVIDER = (Deno.env.get("MARKET_DATA_PROVIDER") ?? "yahoo").trim().toLowerCase();
 const JQUANTS_REFRESH_TOKEN = (Deno.env.get("JQUANTS_REFRESH_TOKEN") ?? "").trim();
 const JQUANTS_EMAIL = (Deno.env.get("JQUANTS_EMAIL") ?? "").trim();
 const JQUANTS_PASSWORD = (Deno.env.get("JQUANTS_PASSWORD") ?? "").trim();
@@ -136,6 +149,20 @@ function jquantsCodeCandidates(code: string) {
     return [normalized, normalized.slice(0, 4)];
   }
   return [normalized];
+}
+
+function yahooSymbolCandidates(code: string) {
+  const normalized = code.trim().toUpperCase();
+  if (/^\d{4}$/.test(normalized)) {
+    return [`${normalized}.T`, normalized];
+  }
+  if (/^\d{5}$/.test(normalized) && normalized.endsWith("0")) {
+    return [`${normalized.slice(0, 4)}.T`, normalized];
+  }
+  if (normalized.includes(".")) {
+    return [normalized];
+  }
+  return [`${normalized}.T`, normalized];
 }
 
 async function getJQuantsIdTokenFromRefreshToken(refreshToken: string) {
@@ -236,9 +263,64 @@ async function fetchJQuantsCandles(stock: Stock, idToken: string): Promise<Candl
   return candles;
 }
 
+async function fetchYahooCandles(stock: Stock): Promise<Candle[]> {
+  for (const symbol of yahooSymbolCandidates(stock.code)) {
+    const params = new URLSearchParams({
+      range: "1y",
+      interval: "1d",
+      events: "history",
+    });
+    const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?${params.toString()}`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        Accept: "application/json",
+      },
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      continue;
+    }
+
+    const result = body.chart?.result?.[0] as YahooChartResult | undefined;
+    const quote = result?.indicators?.quote?.[0];
+    if (!result?.timestamp?.length || !quote) {
+      continue;
+    }
+
+    const candles = result.timestamp
+      .map((timestamp, index) => {
+        const open = numberOrNull(quote.open?.[index]);
+        const high = numberOrNull(quote.high?.[index]);
+        const low = numberOrNull(quote.low?.[index]);
+        const close = numberOrNull(quote.close?.[index]);
+        const volume = numberOrNull(quote.volume?.[index]);
+        if (open === null || high === null || low === null || close === null || volume === null) return null;
+        return {
+          ts: new Date(timestamp * 1000).toISOString(),
+          open: round(open),
+          high: round(high),
+          low: round(low),
+          close: round(close),
+          volume: Math.round(volume),
+        };
+      })
+      .filter((candle): candle is Candle => candle !== null)
+      .sort((a, b) => a.ts.localeCompare(b.ts));
+
+    if (candles.length > 0) {
+      return candles;
+    }
+  }
+
+  throw new Error(`Yahoo Finance returned no usable daily quotes for ${stock.code}.`);
+}
+
 async function getMarketCandles(stock: Stock, idToken: string | null) {
   if (MARKET_DATA_PROVIDER === "sample") {
     return sampleCandles(stock);
+  }
+  if (MARKET_DATA_PROVIDER === "yahoo") {
+    return fetchYahooCandles(stock);
   }
   if (MARKET_DATA_PROVIDER !== "jquants") {
     throw new Error(`Unsupported MARKET_DATA_PROVIDER: ${MARKET_DATA_PROVIDER}`);

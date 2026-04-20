@@ -114,7 +114,7 @@ export default async function BacktestPage({ searchParams }: { searchParams: Pro
             <div className="panel">
               <h2>注意</h2>
               <p className="muted">
-                現在の価格データProviderはサンプル生成です。実運用判断に使う前に、実データProviderへ差し替えてください。
+                現在のバックテストは保存済みの日足データを使います。表示価格は最新取得済み日足の終値です。
               </p>
             </div>
           </section>
