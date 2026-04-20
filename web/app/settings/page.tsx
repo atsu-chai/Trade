@@ -44,7 +44,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       </section>
 
       <section className="notice" style={{ marginTop: 18 }}>
-        既定の価格Providerは `yahoo` です。表示価格は最新取得済み日足の終値です。J-Quantsを使う場合のみ、
+        既定の価格Providerは `yahoo` です。銘柄一覧と詳細ではYahoo Financeから取れる最新価格を表示します。J-Quantsを使う場合のみ、
         Supabase Edge Function側のSecretsに `JQUANTS_EMAIL` / `JQUANTS_PASSWORD` または `JQUANTS_REFRESH_TOKEN` が必要です。
       </section>
 

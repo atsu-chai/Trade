@@ -37,7 +37,7 @@ export default async function EditStockPage({ params }: { params: Promise<{ id: 
           <CandlestickChart candles={candles ?? []} title={`${stock.code} ${stock.name}`} />
           <div className="grid two" style={{ marginTop: 18 }}>
             <div>
-              <strong>最新終値</strong>
+              <strong>最新価格</strong>
               <p>{formatNumber(indicators?.latest_close)}</p>
             </div>
             <div>

@@ -36,6 +36,12 @@ type JQuantsQuote = {
 };
 
 type YahooChartResult = {
+  meta?: {
+    regularMarketPrice?: number;
+    chartPreviousClose?: number;
+    previousClose?: number;
+    regularMarketTime?: number;
+  };
   timestamp?: number[];
   indicators?: {
     quote?: Array<{
@@ -46,6 +52,12 @@ type YahooChartResult = {
       volume?: Array<number | null>;
     }>;
   };
+};
+
+type LatestQuote = {
+  price: number;
+  previousClose: number | null;
+  ts: string;
 };
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -315,6 +327,52 @@ async function fetchYahooCandles(stock: Stock): Promise<Candle[]> {
   throw new Error(`Yahoo Finance returned no usable daily quotes for ${stock.code}.`);
 }
 
+async function fetchYahooLatestQuote(stock: Stock): Promise<LatestQuote | null> {
+  for (const symbol of yahooSymbolCandidates(stock.code)) {
+    const params = new URLSearchParams({
+      range: "1d",
+      interval: "1m",
+    });
+    const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?${params.toString()}`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        Accept: "application/json",
+      },
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) continue;
+
+    const result = body.chart?.result?.[0] as YahooChartResult | undefined;
+    const quote = result?.indicators?.quote?.[0];
+    const metaPrice = numberOrNull(result?.meta?.regularMarketPrice);
+    const previousClose = numberOrNull(result?.meta?.chartPreviousClose) ?? numberOrNull(result?.meta?.previousClose);
+    const metaTime = numberOrNull(result?.meta?.regularMarketTime);
+    if (metaPrice !== null) {
+      return {
+        price: round(metaPrice),
+        previousClose,
+        ts: new Date((metaTime ?? Date.now() / 1000) * 1000).toISOString(),
+      };
+    }
+
+    const timestamps = result?.timestamp ?? [];
+    const closes = quote?.close ?? [];
+    for (let index = closes.length - 1; index >= 0; index -= 1) {
+      const price = numberOrNull(closes[index]);
+      const timestamp = numberOrNull(timestamps[index]);
+      if (price !== null && timestamp !== null) {
+        return {
+          price: round(price),
+          previousClose,
+          ts: new Date(timestamp * 1000).toISOString(),
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
 async function getMarketCandles(stock: Stock, idToken: string | null) {
   if (MARKET_DATA_PROVIDER === "sample") {
     return sampleCandles(stock);
@@ -419,6 +477,17 @@ function calculate(candles: Candle[]): Indicators {
     liquidity_value: latestClose !== null && latestVolume !== null ? latestClose * latestVolume : null,
     recent_high: closes.length >= 20 ? Math.max(...closes.slice(-20)) : null,
     recent_low: closes.length >= 20 ? Math.min(...closes.slice(-20)) : null,
+  };
+}
+
+function applyLatestQuote(indicators: Indicators, latestQuote: LatestQuote | null) {
+  if (!latestQuote) return indicators;
+  const previousClose = latestQuote.previousClose ?? indicators.previous_close;
+  return {
+    ...indicators,
+    latest_close: latestQuote.price,
+    previous_close: previousClose,
+    price_change_pct: previousClose ? ((latestQuote.price - previousClose) / previousClose) * 100 : indicators.price_change_pct,
   };
 }
 
@@ -591,12 +660,13 @@ Deno.serve(async (request) => {
     let notificationCount = 0;
     for (const stock of stocks) {
       const candles = await getMarketCandles(stock, idToken);
+      const latestQuote = MARKET_DATA_PROVIDER === "yahoo" ? await fetchYahooLatestQuote(stock) : null;
       await supabase("price_candles?on_conflict=stock_id,timeframe,ts", {
         method: "POST",
         headers: { Prefer: "resolution=merge-duplicates" },
         body: JSON.stringify(candles.map((candle) => ({ ...candle, stock_id: stock.id, timeframe: "1d" }))),
       });
-      const indicators = calculate(candles);
+      const indicators = applyLatestQuote(calculate(candles), latestQuote);
       const indicatorRow = {
         stock_id: stock.id,
         latest_close: indicators.latest_close,
@@ -614,7 +684,12 @@ Deno.serve(async (request) => {
         vwap: indicators.vwap,
         volume_ratio: indicators.volume_ratio,
         liquidity_value: indicators.liquidity_value,
-        raw_json: { ...indicators, market_data_provider: MARKET_DATA_PROVIDER, latest_candle_at: candles.at(-1)?.ts ?? null },
+        raw_json: {
+          ...indicators,
+          market_data_provider: MARKET_DATA_PROVIDER,
+          latest_candle_at: candles.at(-1)?.ts ?? null,
+          latest_quote_at: latestQuote?.ts ?? null,
+        },
         calculated_at: new Date().toISOString(),
       };
       await supabase("technical_indicators?on_conflict=stock_id", {
@@ -630,7 +705,7 @@ Deno.serve(async (request) => {
       }) as Array<{ id: number }>;
       await supabase(`stocks?id=eq.${stock.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ last_signal: signal.signal_type, last_data_at: new Date().toISOString() }),
+        body: JSON.stringify({ last_signal: signal.signal_type, last_data_at: latestQuote?.ts ?? new Date().toISOString() }),
       });
       if (signal.should_notify) {
         const message = `【${signal.signal_type}】${stock.code} ${stock.name}\nスコア：${signal.score}点 / ${signal.strength}\nリスク：${signal.risk_level}\n\n根拠：\n${signal.reasons_json.slice(0, 3).join("\n")}`;
