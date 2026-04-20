@@ -14,6 +14,8 @@ export type StrongBuyCandidate = {
   name: string;
   tags: string;
   score: number;
+  signalType: string;
+  strength: string;
   latestClose: number;
   priceChangePct: number;
   volumeRatio: number;
@@ -123,54 +125,65 @@ function scoreCandles(stock: (typeof STOCK_MASTER)[number], candles: Candle[]): 
   const liquidityValue = latest.close * latest.volume;
   if (ma5 === null || ma25 === null || ma75 === null || rsi14 === null) return null;
 
-  let score = 0;
+  let technical = 0;
+  let volume = 0;
+  let demand = 0;
+  let safety = 0;
   const reasons: string[] = [];
   if (latest.close > ma5) {
-    score += 10;
+    technical += 10;
     reasons.push("終値が5日線を上回っています。");
   }
   if (ma5 > ma25) {
-    score += 15;
+    technical += 15;
     reasons.push("5日線が25日線を上回っています。");
   }
   if (ma25 > ma75) {
-    score += 14;
+    technical += 14;
     reasons.push("25日線が75日線を上回っています。");
   }
   if (latest.close > previous.close) {
-    score += 8;
+    technical += 8;
     reasons.push("前日比で上昇しています。");
   }
   if (recentHigh <= latest.close * 1.01) {
-    score += 16;
+    technical += 16;
     reasons.push("直近高値圏です。");
   }
   if (volumeRatio >= 2) {
-    score += 18;
+    volume += 18;
+    demand += 6;
     reasons.push("出来高が20日平均の2倍以上です。");
   } else if (volumeRatio >= 1.3) {
-    score += 10;
+    volume += 10;
+    demand += 3;
     reasons.push("出来高が増加傾向です。");
   }
   if (liquidityValue >= 50_000_000) {
-    score += 10;
+    volume += 10;
     reasons.push("売買代金が一定以上あります。");
+  } else {
+    safety -= 10;
   }
   if (rsi14 >= 80) {
-    score -= 20;
+    safety -= 20;
     reasons.push("RSIが高く、過熱に注意です。");
   } else if (rsi14 >= 45 && rsi14 <= 70) {
-    score += 9;
+    technical += 9;
     reasons.push("RSIが買い候補として扱いやすい範囲です。");
   }
 
-  const finalScore = Math.max(0, Math.min(100, Math.floor(score)));
+  const finalScore = Math.max(0, Math.min(100, Math.floor(technical + volume + demand + safety)));
+  const signalType = finalScore >= 65 && rsi14 < 75 ? "買い候補" : finalScore >= 65 ? "過熱" : "見送り";
+  if (signalType !== "買い候補") return null;
 
   return {
     code: stock.code,
     name: stock.name,
     tags: stock.tags,
     score: finalScore,
+    signalType,
+    strength: finalScore >= 80 ? "強" : finalScore >= 60 ? "中" : "弱",
     latestClose: latest.close,
     priceChangePct: ((latest.close - previous.close) / previous.close) * 100,
     volumeRatio,
@@ -190,5 +203,5 @@ export async function scanStrongBuyCandidates() {
   return settled
     .flatMap((result) => (result.status === "fulfilled" && result.value ? [result.value] : []))
     .sort((a, b) => b.score - a.score)
-    .slice(0, 10);
+    .slice(0, 8);
 }

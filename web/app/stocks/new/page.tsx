@@ -45,19 +45,19 @@ export default async function NewStockPage({
           <p className="muted">監視対象、保有情報、通知判断に使う補助情報を登録します。</p>
         </div>
         <form action={findStrongBuyCandidates}>
-          <button type="submit">強シグナル候補を探す</button>
+          <button type="submit">買いシグナル銘柄を探す</button>
         </form>
       </section>
       {candidates.length ? (
         <section className="panel" style={{ marginBottom: 18 }}>
-          <h2>買いの強シグナル候補</h2>
+          <h2>買いシグナル銘柄</h2>
           <p className="muted">
-            Yahoo Financeの日足で銘柄マスターを現時点評価し、買い候補スコアが高い順に複数表示しています。
+            Yahoo Financeの日足で銘柄マスターを現時点評価し、買いシグナル判定になった銘柄をスコア順に表示しています。
           </p>
           <StrongBuyCandidateList candidates={candidates} />
         </section>
       ) : params.scan ? (
-        <section className="notice">強シグナル候補は見つかりませんでした。時間を置いて再実行してください。</section>
+        <section className="notice">買いシグナル銘柄は見つかりませんでした。時間を置いて再実行してください。</section>
       ) : null}
       <section className="panel" id="stock-form-panel">
         <StockForm stock={initialStock} />

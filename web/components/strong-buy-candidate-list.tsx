@@ -28,7 +28,9 @@ export function StrongBuyCandidateList({ candidates }: { candidates: StrongBuyCa
               出来高倍率 {formatNumber(candidate.volumeRatio)}倍
             </p>
           </div>
-          <strong className="score-pill">{candidate.score}点</strong>
+          <strong className="score-pill">
+            {candidate.signalType} / {candidate.score}点 / {candidate.strength}
+          </strong>
           <ul>
             {candidate.reasons.map((reason) => (
               <li key={reason}>{reason}</li>
