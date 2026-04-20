@@ -2,14 +2,14 @@ import { redirect } from "next/navigation";
 import { findStrongBuyCandidates } from "@/app/actions";
 import { StrongBuyCandidateList } from "@/components/strong-buy-candidate-list";
 import { StockForm } from "@/components/stock-form";
-import type { StrongBuyCandidate } from "@/lib/market-scan";
+import { MAX_STRONG_BUY_CANDIDATES, type StrongBuyCandidate } from "@/lib/market-scan";
 import { createClient } from "@/lib/supabase/server";
 
 function parseScan(value?: string) {
   if (!value) return [];
   try {
     const parsed = JSON.parse(value) as StrongBuyCandidate[];
-    return Array.isArray(parsed) ? parsed.slice(0, 8) : [];
+    return Array.isArray(parsed) ? parsed.slice(0, MAX_STRONG_BUY_CANDIDATES) : [];
   } catch {
     return [];
   }
@@ -52,7 +52,7 @@ export default async function NewStockPage({
         <section className="panel" style={{ marginBottom: 18 }}>
           <h2>買いシグナル銘柄</h2>
           <p className="muted">
-            Yahoo Financeの日足で銘柄マスターを現時点評価し、買いシグナル判定になった銘柄をスコア順に表示しています。
+            Yahoo Financeの日足で主要銘柄を広く評価し、買いシグナル判定になった銘柄を最大20件までスコア順に表示しています。
           </p>
           <StrongBuyCandidateList candidates={candidates} />
         </section>

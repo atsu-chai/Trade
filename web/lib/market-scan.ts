@@ -1,5 +1,7 @@
 import { STOCK_MASTER } from "@/lib/stock-master";
 
+export const MAX_STRONG_BUY_CANDIDATES = 20;
+
 type Candle = {
   ts: string;
   open: number;
@@ -203,5 +205,5 @@ export async function scanStrongBuyCandidates() {
   return settled
     .flatMap((result) => (result.status === "fulfilled" && result.value ? [result.value] : []))
     .sort((a, b) => b.score - a.score)
-    .slice(0, 8);
+    .slice(0, MAX_STRONG_BUY_CANDIDATES);
 }
