@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { scanStrongBuyCandidates } from "@/lib/market-scan";
 
 function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -59,4 +60,16 @@ export async function deleteStock(formData: FormData) {
   if (error) redirect(`/stocks?message=${encodeURIComponent(error.message)}`);
   revalidatePath("/stocks");
   revalidatePath("/dashboard");
+}
+
+export async function findStrongBuyCandidates() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const candidates = await scanStrongBuyCandidates();
+  const payload = encodeURIComponent(JSON.stringify(candidates));
+  redirect(`/stocks/new?scan=${payload}`);
 }
