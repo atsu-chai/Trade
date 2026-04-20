@@ -45,6 +45,20 @@ export function StockForm({ stock }: { stock?: Stock }) {
     setTags(candidate.tags);
   }
 
+  useEffect(() => {
+    function handleAutofill(event: Event) {
+      const detail = (event as CustomEvent<{ code?: string; name?: string; tags?: string }>).detail;
+      if (!detail?.code) return;
+      setCode(detail.code);
+      setName(detail.name ?? "");
+      setTags(detail.tags ?? "");
+      document.getElementById("stock-form-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    window.addEventListener("stock-form-autofill", handleAutofill);
+    return () => window.removeEventListener("stock-form-autofill", handleAutofill);
+  }, []);
+
   return (
     <form action={upsertStock}>
       <input type="hidden" name="id" value={stock?.id ?? ""} />

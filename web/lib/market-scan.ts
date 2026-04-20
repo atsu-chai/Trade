@@ -165,7 +165,6 @@ function scoreCandles(stock: (typeof STOCK_MASTER)[number], candles: Candle[]): 
   }
 
   const finalScore = Math.max(0, Math.min(100, Math.floor(score)));
-  if (finalScore < 80) return null;
 
   return {
     code: stock.code,
@@ -191,5 +190,5 @@ export async function scanStrongBuyCandidates() {
   return settled
     .flatMap((result) => (result.status === "fulfilled" && result.value ? [result.value] : []))
     .sort((a, b) => b.score - a.score)
-    .slice(0, 8);
+    .slice(0, 10);
 }
