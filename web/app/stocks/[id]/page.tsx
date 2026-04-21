@@ -15,14 +15,17 @@ export default async function EditStockPage({ params }: { params: Promise<{ id: 
   if (!user) redirect("/login");
 
   const { id } = await params;
-  const [{ data: stock }, { data: candles }, { data: indicators }, { data: signals }] = await Promise.all([
+  const [{ data: stock }, { data: intradayCandles }, { data: dailyCandles }, { data: indicators }, { data: signals }] = await Promise.all([
     supabase.from("stocks").select("*").eq("id", id).single(),
+    supabase.from("price_candles").select("*").eq("stock_id", id).eq("timeframe", "15m").order("ts", { ascending: true }).limit(160),
     supabase.from("price_candles").select("*").eq("stock_id", id).eq("timeframe", "1d").order("ts", { ascending: true }).limit(100),
     supabase.from("technical_indicators").select("*").eq("stock_id", id).maybeSingle(),
     supabase.from("signals").select("*").eq("stock_id", id).order("id", { ascending: false }).limit(20),
   ]);
   if (!stock) notFound();
   const liveQuote = await fetchLiveQuote(stock.code);
+  const chartCandles = (intradayCandles?.length ? intradayCandles : dailyCandles) ?? [];
+  const chartTimeframeLabel = intradayCandles?.length ? "15分足" : "日足";
 
   return (
     <main>
@@ -38,7 +41,10 @@ export default async function EditStockPage({ params }: { params: Promise<{ id: 
       <section className="grid two">
         <div className="panel">
           <h2>チャートと指標</h2>
-          <CandlestickChart candles={candles ?? []} title={`${stock.code} ${stock.name}`} />
+          <CandlestickChart candles={chartCandles} title={`${stock.code} ${stock.name} ${chartTimeframeLabel}`} />
+          <p className="muted" style={{ marginTop: 10 }}>
+            表示足種: {chartTimeframeLabel}
+          </p>
           <div className="grid two" style={{ marginTop: 18 }}>
             <div>
               <strong>最新価格</strong>

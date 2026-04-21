@@ -343,6 +343,59 @@ async function fetchYahooCandles(stock: Stock): Promise<Candle[]> {
   throw new Error(`Yahoo Finance returned no usable daily quotes for ${stock.code}.`);
 }
 
+async function fetchYahooIntradayCandles(stock: Stock): Promise<Candle[]> {
+  for (const symbol of yahooSymbolCandidates(stock.code)) {
+    const params = new URLSearchParams({
+      range: "5d",
+      interval: "15m",
+      includePrePost: "false",
+      events: "history",
+    });
+    const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?${params.toString()}`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        Accept: "application/json",
+      },
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      continue;
+    }
+
+    const result = body.chart?.result?.[0] as YahooChartResult | undefined;
+    const quote = result?.indicators?.quote?.[0];
+    if (!result?.timestamp?.length || !quote) {
+      continue;
+    }
+
+    const candles = result.timestamp
+      .map((timestamp, index) => {
+        const open = numberOrNull(quote.open?.[index]);
+        const high = numberOrNull(quote.high?.[index]);
+        const low = numberOrNull(quote.low?.[index]);
+        const close = numberOrNull(quote.close?.[index]);
+        const volume = numberOrNull(quote.volume?.[index]);
+        if (open === null || high === null || low === null || close === null || volume === null) return null;
+        return {
+          ts: new Date(timestamp * 1000).toISOString(),
+          open: round(open),
+          high: round(high),
+          low: round(low),
+          close: round(close),
+          volume: Math.round(volume),
+        };
+      })
+      .filter((candle): candle is Candle => candle !== null)
+      .sort((a, b) => a.ts.localeCompare(b.ts));
+
+    if (candles.length > 0) {
+      return candles;
+    }
+  }
+
+  return [];
+}
+
 async function fetchYahooLatestQuote(stock: Stock): Promise<LatestQuote | null> {
   for (const symbol of yahooSymbolCandidates(stock.code)) {
     const params = new URLSearchParams({
@@ -719,12 +772,20 @@ Deno.serve(async (request) => {
     const summaryRows: SummaryRow[] = [];
     for (const stock of stocks) {
       const candles = await getMarketCandles(stock, idToken);
+      const intradayCandles = MARKET_DATA_PROVIDER === "yahoo" ? await fetchYahooIntradayCandles(stock) : [];
       const latestQuote = MARKET_DATA_PROVIDER === "yahoo" ? await fetchYahooLatestQuote(stock) : null;
       await supabase("price_candles?on_conflict=stock_id,timeframe,ts", {
         method: "POST",
         headers: { Prefer: "resolution=merge-duplicates" },
         body: JSON.stringify(candles.map((candle) => ({ ...candle, stock_id: stock.id, timeframe: "1d" }))),
       });
+      if (intradayCandles.length > 0) {
+        await supabase("price_candles?on_conflict=stock_id,timeframe,ts", {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates" },
+          body: JSON.stringify(intradayCandles.map((candle) => ({ ...candle, stock_id: stock.id, timeframe: "15m" }))),
+        });
+      }
       const indicators = applyLatestQuote(calculate(candles), latestQuote);
       const indicatorRow = {
         stock_id: stock.id,
