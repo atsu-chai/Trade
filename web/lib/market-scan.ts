@@ -165,19 +165,30 @@ function scoreCandles(stock: (typeof STOCK_MASTER)[number], candles: Candle[]): 
     volume += 10;
     reasons.push("15分足ベースでも売買代金があります。");
   } else {
-    safety -= 10;
+    safety -= 6;
   }
   if (rsi14 >= 78) {
     safety -= 20;
     reasons.push("RSIが高く、飛び乗りに注意です。");
+  } else if (rsi14 >= 72) {
+    safety -= 8;
+    reasons.push("RSIがやや高めです。");
   } else if (rsi14 >= 52 && rsi14 <= 72) {
     technical += 9;
     reasons.push("RSIがデイトレ向きの帯にあります。");
   }
 
   const finalScore = Math.max(0, Math.min(100, Math.floor(technical + volume + demand + safety)));
-  const signalType = finalScore >= 68 && rsi14 < 74 ? "買い候補" : finalScore >= 68 ? "過熱" : "見送り";
-  if (signalType !== "買い候補") return null;
+  const trendOk = latest.close > ma25 && ma5 > ma25;
+  let signalType = "見送り";
+  if (finalScore >= 66 && rsi14 < 76) {
+    signalType = "買い候補";
+  } else if (finalScore >= 58 && trendOk && rsi14 < 78) {
+    signalType = "監視候補";
+  } else if (finalScore >= 66) {
+    signalType = "過熱";
+  }
+  if (!["買い候補", "監視候補"].includes(signalType)) return null;
 
   return {
     code: stock.code,
@@ -204,6 +215,9 @@ export async function scanStrongBuyCandidates() {
 
   return settled
     .flatMap((result) => (result.status === "fulfilled" && result.value ? [result.value] : []))
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => {
+      const priority = (signalType: string) => (signalType === "買い候補" ? 0 : 1);
+      return priority(a.signalType) - priority(b.signalType) || b.score - a.score;
+    })
     .slice(0, MAX_STRONG_BUY_CANDIDATES);
 }

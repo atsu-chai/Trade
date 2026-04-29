@@ -50,14 +50,14 @@ export default async function NewStockPage({
       </section>
       {candidates.length ? (
         <section className="panel" style={{ marginBottom: 18 }}>
-          <h2>買いシグナル銘柄</h2>
+          <h2>買いシグナル候補</h2>
           <p className="muted">
-            Yahoo Financeの15分足で主要銘柄を広く評価し、デイトレ寄りの買いシグナル判定になった銘柄を最大20件までスコア順に表示しています。
+            Yahoo Financeの15分足で主要銘柄を広く評価し、買い候補を優先しつつ、条件が近い監視候補も含めて最大20件までスコア順に表示しています。
           </p>
           <StrongBuyCandidateList candidates={candidates} />
         </section>
       ) : params.scan ? (
-        <section className="notice">買いシグナル銘柄は見つかりませんでした。時間を置いて再実行してください。</section>
+        <section className="notice">候補が見つかりませんでした。時間を置くか、相場の強い時間帯に再実行してください。</section>
       ) : null}
       <section className="panel" id="stock-form-panel">
         <StockForm stock={initialStock} />
