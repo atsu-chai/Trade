@@ -52,7 +52,7 @@ export default async function NewStockPage({
         <section className="panel" style={{ marginBottom: 18 }}>
           <h2>買いシグナル銘柄</h2>
           <p className="muted">
-            Yahoo Financeの日足で主要銘柄を広く評価し、買いシグナル判定になった銘柄を最大20件までスコア順に表示しています。
+            Yahoo Financeの15分足で主要銘柄を広く評価し、デイトレ寄りの買いシグナル判定になった銘柄を最大20件までスコア順に表示しています。
           </p>
           <StrongBuyCandidateList candidates={candidates} />
         </section>

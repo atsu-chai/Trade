@@ -24,7 +24,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <section className="grid two">
         <div className="panel">
           <h1>手動実行</h1>
-          <p className="muted">Cronを待たずに、Yahoo Financeの日足データで登録銘柄をすぐ分析します。</p>
+          <p className="muted">Cronを待たずに、Yahoo Financeの15分足ベースで登録銘柄をすぐ分析します。</p>
           <form action="/api/run-bot" method="POST">
             <button type="submit">Botを今すぐ実行</button>
           </form>

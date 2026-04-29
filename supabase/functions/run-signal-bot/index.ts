@@ -519,7 +519,8 @@ function vwap(candles: Candle[]) {
   return volume === 0 ? null : pv / volume;
 }
 
-function calculate(candles: Candle[]): Indicators {
+function calculate(candles: Candle[], options?: { intraday?: boolean }): Indicators {
+  const intraday = options?.intraday ?? false;
   const closes = candles.map((candle) => candle.close);
   const volumes = candles.map((candle) => candle.volume);
   const latestClose = closes.at(-1) ?? null;
@@ -528,13 +529,16 @@ function calculate(candles: Candle[]): Indicators {
   const volumeAvg20 = volumes.length >= 21 ? volumes.slice(-21, -1).reduce((sum, value) => sum + value, 0) / 20 : null;
   const bb = bollinger(closes);
   const macdValue = macd(closes);
+  const maMediumPeriod = intraday ? 20 : 25;
+  const maLongPeriod = intraday ? 60 : 75;
+  const recentRangePeriod = intraday ? 16 : 20;
   return {
     latest_close: latestClose,
     previous_close: previousClose,
     price_change_pct: latestClose !== null && previousClose ? ((latestClose - previousClose) / previousClose) * 100 : null,
     ma5: sma(closes, 5),
-    ma25: sma(closes, 25),
-    ma75: sma(closes, 75),
+    ma25: sma(closes, maMediumPeriod),
+    ma75: sma(closes, maLongPeriod),
     rsi14: rsi(closes),
     macd: macdValue.macd,
     macd_signal: macdValue.signal,
@@ -544,8 +548,9 @@ function calculate(candles: Candle[]): Indicators {
     vwap: vwap(candles.slice(-20)),
     volume_ratio: latestVolume !== null && volumeAvg20 ? latestVolume / volumeAvg20 : null,
     liquidity_value: latestClose !== null && latestVolume !== null ? latestClose * latestVolume : null,
-    recent_high: closes.length >= 20 ? Math.max(...closes.slice(-20)) : null,
-    recent_low: closes.length >= 20 ? Math.min(...closes.slice(-20)) : null,
+    recent_high: closes.length >= recentRangePeriod ? Math.max(...closes.slice(-recentRangePeriod)) : null,
+    recent_low: closes.length >= recentRangePeriod ? Math.min(...closes.slice(-recentRangePeriod)) : null,
+    analysis_timeframe: intraday ? "15m" : "1d",
   };
 }
 
@@ -606,60 +611,62 @@ function generateSignal(stock: Stock, indicators: Indicators) {
   const reasons: string[] = [];
   const cautions: string[] = [];
   const latestClose = close as number;
+  const analysisTimeframe = String(indicators.analysis_timeframe ?? "1d");
+  const isIntraday = analysisTimeframe === "15m";
   if (latestClose > (vwapValue as number)) {
-    technical += 8;
-    reasons.push("株価がVWAPを上回っています。");
+    technical += isIntraday ? 12 : 8;
+    reasons.push(isIntraday ? "現在値がVWAPを上回り、場中の買い優勢です。" : "株価がVWAPを上回っています。");
   }
   if ((ma5 as number) > (ma25 as number)) {
-    technical += 8;
-    reasons.push("5日移動平均線が25日移動平均線を上回っています。");
+    technical += isIntraday ? 12 : 8;
+    reasons.push(isIntraday ? "短期線が基準線を上回り、15分足の上昇トレンドです。" : "5日移動平均線が25日移動平均線を上回っています。");
   }
   if ((indicators.ma75 ?? 0) > 0 && (ma25 as number) > (indicators.ma75 as number)) {
-    technical += 6;
-    reasons.push("中期の移動平均線も上向きです。");
+    technical += isIntraday ? 10 : 6;
+    reasons.push(isIntraday ? "基準線も上位線を上回り、トレンドの傾きが維持されています。" : "中期の移動平均線も上向きです。");
   }
   if ((indicators.previous_close ?? latestClose) < latestClose) {
-    technical += 5;
-    reasons.push("前日比で上昇しています。");
+    technical += isIntraday ? 7 : 5;
+    reasons.push(isIntraday ? "直近15分足で上昇しています。" : "前日比で上昇しています。");
   }
   if ((indicators.recent_high ?? Infinity) <= latestClose * 1.005) {
-    technical += 8;
-    reasons.push("直近高値圏まで上昇しています。");
+    technical += isIntraday ? 12 : 8;
+    reasons.push(isIntraday ? "直近4時間の高値圏を試しています。" : "直近高値圏まで上昇しています。");
   }
   if ((indicators.macd ?? 0) > (indicators.macd_signal ?? Infinity)) {
-    technical += 5;
-    reasons.push("MACDがシグナルを上回っています。");
+    technical += isIntraday ? 8 : 5;
+    reasons.push(isIntraday ? "MACDが上向きで短期モメンタムが優勢です。" : "MACDがシグナルを上回っています。");
   }
-  if ((volumeRatio as number) >= 2) {
-    volume += 15;
+  if ((volumeRatio as number) >= (isIntraday ? 1.8 : 2)) {
+    volume += isIntraday ? 18 : 15;
     demand += 6;
-    reasons.push("出来高が直近平均の2倍以上です。");
-  } else if ((volumeRatio as number) >= 1.3) {
-    volume += 8;
+    reasons.push(isIntraday ? "出来高が直近15分足平均の1.8倍以上で急増しています。" : "出来高が直近平均の2倍以上です。");
+  } else if ((volumeRatio as number) >= (isIntraday ? 1.15 : 1.3)) {
+    volume += isIntraday ? 10 : 8;
     demand += 3;
-    reasons.push("出来高が増加傾向です。");
+    reasons.push(isIntraday ? "出来高が短期的に増加傾向です。" : "出来高が増加傾向です。");
   }
-  if ((indicators.liquidity_value ?? 0) >= 50_000_000) {
+  if ((indicators.liquidity_value ?? 0) >= (isIntraday ? 20_000_000 : 50_000_000)) {
     volume += 10;
-    reasons.push("売買代金が一定以上あり、流動性があります。");
+    reasons.push(isIntraday ? "15分足ベースでも売買代金が十分あります。" : "売買代金が一定以上あり、流動性があります。");
   } else {
     safety -= 10;
     cautions.push("売買代金が少なく、流動性リスクがあります。");
   }
-  if ((rsi14 as number) >= 80) {
+  if ((rsi14 as number) >= (isIntraday ? 78 : 80)) {
     safety -= 16;
-    cautions.push("RSIが高く、短期過熱感があります。");
-  } else if ((rsi14 as number) >= 70) {
+    cautions.push(isIntraday ? "RSIが高く、短期の飛び乗りに注意です。" : "RSIが高く、短期過熱感があります。");
+  } else if ((rsi14 as number) >= (isIntraday ? 68 : 70)) {
     safety -= 8;
-    cautions.push("RSIがやや高めです。");
-  } else if ((rsi14 as number) >= 45 && (rsi14 as number) <= 65) {
-    technical += 5;
-    reasons.push("RSIは過熱しすぎていない範囲です。");
+    cautions.push(isIntraday ? "RSIがやや高めで押し目待ちが必要です。" : "RSIがやや高めです。");
+  } else if ((rsi14 as number) >= (isIntraday ? 52 : 45) && (rsi14 as number) <= (isIntraday ? 72 : 65)) {
+    technical += isIntraday ? 8 : 5;
+    reasons.push(isIntraday ? "RSIが短期ブレイク狙いに使いやすい帯です。" : "RSIは過熱しすぎていない範囲です。");
   }
 
   let score = Math.max(0, Math.min(100, technical + volume + demand + safety));
-  let signalType = score >= 65 ? "買い候補" : "見送り";
-  if (signalType === "買い候補" && (rsi14 as number) >= 75) signalType = "過熱";
+  let signalType = score >= (isIntraday ? 68 : 65) ? "買い候補" : "見送り";
+  if (signalType === "買い候補" && (rsi14 as number) >= (isIntraday ? 74 : 75)) signalType = "過熱";
   const risk = cautions.length >= 2 || (volumeRatio as number) >= 4 ? "高" : cautions.length >= 1 ? "中" : "低";
   const shouldNotify = ["損切り候補", "撤退検討"].includes(signalType) || (["買い候補", "利確売り候補"].includes(signalType) && score >= 80);
   return {
@@ -674,7 +681,9 @@ function generateSignal(stock: Stock, indicators: Indicators) {
     stop_loss: signalType !== "見送り" ? round(latestClose * 0.97) : null,
     reasons_json: reasons.length ? reasons : ["明確な優位性は限定的です。"],
     cautions_json: cautions,
-    beginner_note: "点数はテクニカル、出来高、流動性、過熱リスクをルールで合算した目安です。断定ではなく確認材料として使ってください。",
+    beginner_note: isIntraday
+      ? "15分足ベースで、VWAP、短期移動平均、出来高急増、短期過熱を合算したデイトレ寄りの目安です。"
+      : "点数はテクニカル、出来高、流動性、過熱リスクをルールで合算した目安です。断定ではなく確認材料として使ってください。",
     breakdown_json: {
       technical: Math.min(40, technical),
       volume_liquidity: Math.min(25, volume),
@@ -786,7 +795,8 @@ Deno.serve(async (request) => {
           body: JSON.stringify(intradayCandles.map((candle) => ({ ...candle, stock_id: stock.id, timeframe: "15m" }))),
         });
       }
-      const indicators = applyLatestQuote(calculate(candles), latestQuote);
+      const analysisCandles = intradayCandles.length >= 80 ? intradayCandles : candles;
+      const indicators = applyLatestQuote(calculate(analysisCandles, { intraday: intradayCandles.length >= 80 }), latestQuote);
       const indicatorRow = {
         stock_id: stock.id,
         latest_close: indicators.latest_close,
@@ -807,7 +817,7 @@ Deno.serve(async (request) => {
         raw_json: {
           ...indicators,
           market_data_provider: MARKET_DATA_PROVIDER,
-          latest_candle_at: candles.at(-1)?.ts ?? null,
+          latest_candle_at: analysisCandles.at(-1)?.ts ?? null,
           latest_quote_at: latestQuote?.ts ?? null,
         },
         calculated_at: new Date().toISOString(),

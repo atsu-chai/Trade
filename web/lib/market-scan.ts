@@ -74,7 +74,7 @@ function yahooSymbol(code: string) {
 }
 
 async function fetchYahooCandles(code: string): Promise<Candle[]> {
-  const params = new URLSearchParams({ range: "1y", interval: "1d", events: "history" });
+  const params = new URLSearchParams({ range: "5d", interval: "15m", includePrePost: "false", events: "history" });
   const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol(code))}?${params}`, {
     headers: {
       "User-Agent": "Mozilla/5.0",
@@ -118,12 +118,12 @@ function scoreCandles(stock: (typeof STOCK_MASTER)[number], candles: Candle[]): 
   if (!latest || !previous || closes.length < 80) return null;
 
   const ma5 = sma(closes, 5);
-  const ma25 = sma(closes, 25);
-  const ma75 = sma(closes, 75);
+  const ma25 = sma(closes, 20);
+  const ma75 = sma(closes, 60);
   const rsi14 = rsi(closes);
   const volumeAvg20 = volumes.slice(-21, -1).reduce((sum, value) => sum + value, 0) / 20;
   const volumeRatio = volumeAvg20 > 0 ? latest.volume / volumeAvg20 : 0;
-  const recentHigh = Math.max(...closes.slice(-20));
+  const recentHigh = Math.max(...closes.slice(-16));
   const liquidityValue = latest.close * latest.volume;
   if (ma5 === null || ma25 === null || ma75 === null || rsi14 === null) return null;
 
@@ -134,49 +134,49 @@ function scoreCandles(stock: (typeof STOCK_MASTER)[number], candles: Candle[]): 
   const reasons: string[] = [];
   if (latest.close > ma5) {
     technical += 10;
-    reasons.push("終値が5日線を上回っています。");
+    reasons.push("直近15分足の価格が短期線を上回っています。");
   }
   if (ma5 > ma25) {
     technical += 15;
-    reasons.push("5日線が25日線を上回っています。");
+    reasons.push("短期線が基準線を上回っています。");
   }
   if (ma25 > ma75) {
     technical += 14;
-    reasons.push("25日線が75日線を上回っています。");
+    reasons.push("基準線が上位線を上回り、短期上昇トレンドです。");
   }
   if (latest.close > previous.close) {
     technical += 8;
-    reasons.push("前日比で上昇しています。");
+    reasons.push("直近15分足で上昇しています。");
   }
   if (recentHigh <= latest.close * 1.01) {
     technical += 16;
-    reasons.push("直近高値圏です。");
+    reasons.push("直近4時間の高値圏です。");
   }
-  if (volumeRatio >= 2) {
+  if (volumeRatio >= 1.8) {
     volume += 18;
     demand += 6;
-    reasons.push("出来高が20日平均の2倍以上です。");
-  } else if (volumeRatio >= 1.3) {
+    reasons.push("出来高が直近15分足平均の1.8倍以上です。");
+  } else if (volumeRatio >= 1.15) {
     volume += 10;
     demand += 3;
-    reasons.push("出来高が増加傾向です。");
+    reasons.push("出来高が短期的に増加しています。");
   }
-  if (liquidityValue >= 50_000_000) {
+  if (liquidityValue >= 20_000_000) {
     volume += 10;
-    reasons.push("売買代金が一定以上あります。");
+    reasons.push("15分足ベースでも売買代金があります。");
   } else {
     safety -= 10;
   }
-  if (rsi14 >= 80) {
+  if (rsi14 >= 78) {
     safety -= 20;
-    reasons.push("RSIが高く、過熱に注意です。");
-  } else if (rsi14 >= 45 && rsi14 <= 70) {
+    reasons.push("RSIが高く、飛び乗りに注意です。");
+  } else if (rsi14 >= 52 && rsi14 <= 72) {
     technical += 9;
-    reasons.push("RSIが買い候補として扱いやすい範囲です。");
+    reasons.push("RSIがデイトレ向きの帯にあります。");
   }
 
   const finalScore = Math.max(0, Math.min(100, Math.floor(technical + volume + demand + safety)));
-  const signalType = finalScore >= 65 && rsi14 < 75 ? "買い候補" : finalScore >= 65 ? "過熱" : "見送り";
+  const signalType = finalScore >= 68 && rsi14 < 74 ? "買い候補" : finalScore >= 68 ? "過熱" : "見送り";
   if (signalType !== "買い候補") return null;
 
   return {
@@ -189,7 +189,7 @@ function scoreCandles(stock: (typeof STOCK_MASTER)[number], candles: Candle[]): 
     latestClose: latest.close,
     priceChangePct: ((latest.close - previous.close) / previous.close) * 100,
     volumeRatio,
-    latestDate: latest.ts.slice(0, 10),
+    latestDate: latest.ts,
     reasons: reasons.slice(0, 4),
   };
 }

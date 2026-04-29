@@ -4,6 +4,17 @@ import type { StrongBuyCandidate } from "@/lib/market-scan";
 import { formatNumber } from "@/lib/ui";
 
 export function StrongBuyCandidateList({ candidates }: { candidates: StrongBuyCandidate[] }) {
+  function formatCandidateTime(value: string) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat("ja-JP", {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  }
+
   function applyCandidate(candidate: StrongBuyCandidate) {
     window.dispatchEvent(
       new CustomEvent("stock-form-autofill", {
@@ -24,8 +35,8 @@ export function StrongBuyCandidateList({ candidates }: { candidates: StrongBuyCa
             <p className="eyebrow">{candidate.code}</p>
             <h3>{candidate.name}</h3>
             <p className="muted">
-              {candidate.latestDate} / 終値 {formatNumber(candidate.latestClose)} / 前日比 {formatNumber(candidate.priceChangePct)}% /
-              出来高倍率 {formatNumber(candidate.volumeRatio)}倍
+              {formatCandidateTime(candidate.latestDate)} / 現在値 {formatNumber(candidate.latestClose)} / 直近変化 {formatNumber(candidate.priceChangePct)}%
+              / 出来高倍率 {formatNumber(candidate.volumeRatio)}倍
             </p>
           </div>
           <strong className="score-pill">
