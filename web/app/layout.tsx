@@ -34,6 +34,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <Link href="/dashboard">ダッシュボード</Link>
                 <Link href="/stocks">銘柄</Link>
                 <Link href="/signals">シグナル</Link>
+                <Link href="/virtual-bot">仮想bot</Link>
                 <Link href="/backtest">バックテスト</Link>
                 <Link href="/notifications">通知</Link>
                 <Link href="/runs">実行履歴</Link>

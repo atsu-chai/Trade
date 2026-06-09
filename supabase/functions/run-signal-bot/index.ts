@@ -1,5 +1,6 @@
 type Stock = {
   id: number;
+  user_id: string;
   code: string;
   name: string;
   watch_status: "normal" | "strong" | "stopped";
@@ -19,6 +20,36 @@ type Candle = {
 };
 
 type Indicators = Record<string, number | null>;
+
+type VirtualBot = {
+  id: number;
+  user_id: string;
+  status: "active" | "paused";
+  initial_cash: number | string;
+  cash_balance: number | string;
+  realized_pnl: number | string;
+  latest_equity: number | string;
+};
+
+type VirtualPosition = {
+  id: number;
+  bot_id: number;
+  stock_id: number;
+  quantity: number;
+  avg_cost: number | string;
+  last_price: number | string;
+  market_value: number | string;
+  unrealized_pnl: number | string;
+  opened_at: string;
+};
+
+type VirtualAnalysisRow = {
+  stock: Stock;
+  signalId: number | null;
+  signalType: string;
+  score: number;
+  price: number | null;
+};
 
 type JQuantsQuote = {
   Date: string;
@@ -85,6 +116,10 @@ const MARKET_DATA_PROVIDER = (Deno.env.get("MARKET_DATA_PROVIDER") ?? "yahoo").t
 const JQUANTS_REFRESH_TOKEN = (Deno.env.get("JQUANTS_REFRESH_TOKEN") ?? "").trim();
 const JQUANTS_EMAIL = (Deno.env.get("JQUANTS_EMAIL") ?? "").trim();
 const JQUANTS_PASSWORD = (Deno.env.get("JQUANTS_PASSWORD") ?? "").trim();
+const VIRTUAL_BOT_INITIAL_CASH = 100000;
+const VIRTUAL_BOT_MAX_POSITIONS = 4;
+const VIRTUAL_BOT_POSITION_RATIO = 0.25;
+const VIRTUAL_BOT_MIN_TRADE_AMOUNT = 10000;
 
 function headers(extra: Record<string, string> = {}) {
   return {
@@ -154,6 +189,12 @@ function sampleCandles(stock: Stock): Candle[] {
 
 function round(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+function toNumber(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === "") return 0;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
 }
 
 function formatDate(date: Date) {
@@ -765,6 +806,188 @@ async function saveNotificationSignature(stockId: number, signature: string) {
   });
 }
 
+async function ensureVirtualBot(userId: string) {
+  const existing = await supabase(`virtual_bots?user_id=eq.${userId}&select=*`) as VirtualBot[];
+  if (existing[0]) return existing[0];
+
+  const created = await supabase("virtual_bots", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify([{
+      user_id: userId,
+      name: "仮想bot",
+      status: "active",
+      initial_cash: VIRTUAL_BOT_INITIAL_CASH,
+      cash_balance: VIRTUAL_BOT_INITIAL_CASH,
+      latest_equity: VIRTUAL_BOT_INITIAL_CASH,
+      realized_pnl: 0,
+    }]),
+  }) as VirtualBot[];
+  return created[0];
+}
+
+async function loadVirtualPositions(botId: number) {
+  return await supabase(`virtual_positions?bot_id=eq.${botId}&select=*`) as VirtualPosition[];
+}
+
+async function recordVirtualTrade(params: {
+  botId: number;
+  stockId: number;
+  signalId: number | null;
+  side: "buy" | "sell";
+  quantity: number;
+  price: number;
+  realizedPnl?: number;
+  reason: string;
+}) {
+  const grossAmount = round(params.quantity * params.price);
+  await supabase("virtual_trades", {
+    method: "POST",
+    body: JSON.stringify([{
+      bot_id: params.botId,
+      stock_id: params.stockId,
+      signal_id: params.signalId,
+      side: params.side,
+      quantity: params.quantity,
+      price: round(params.price),
+      gross_amount: grossAmount,
+      realized_pnl: round(params.realizedPnl ?? 0),
+      reason: params.reason,
+      executed_at: new Date().toISOString(),
+    }]),
+  });
+}
+
+async function runVirtualPortfolioBot(analyses: VirtualAnalysisRow[]) {
+  const byUser = new Map<string, VirtualAnalysisRow[]>();
+  for (const row of analyses) {
+    const rows = byUser.get(row.stock.user_id) ?? [];
+    rows.push(row);
+    byUser.set(row.stock.user_id, rows);
+  }
+
+  for (const [userId, rows] of byUser) {
+    const bot = await ensureVirtualBot(userId);
+    const positions = await loadVirtualPositions(bot.id);
+    const positionMap = new Map(positions.map((position) => [position.stock_id, position]));
+    const priceMap = new Map(rows.map((row) => [row.stock.id, row.price]));
+
+    let cash = toNumber(bot.cash_balance);
+    let realizedPnl = toNumber(bot.realized_pnl);
+
+    for (const position of positions) {
+      const analysis = rows.find((row) => row.stock.id === position.stock_id);
+      const latestPrice = priceMap.get(position.stock_id) ?? toNumber(position.last_price);
+      if (!analysis || latestPrice <= 0) continue;
+
+      const exitSignal = ["見送り", "過熱", "利確売り候補", "損切り候補", "撤退検討", "下落リスク上昇"].includes(analysis.signalType);
+      if (!exitSignal) continue;
+
+      const quantity = position.quantity;
+      const avgCost = toNumber(position.avg_cost);
+      const proceeds = round(quantity * latestPrice);
+      const tradeRealizedPnl = round((latestPrice - avgCost) * quantity);
+      cash = round(cash + proceeds);
+      realizedPnl = round(realizedPnl + tradeRealizedPnl);
+
+      await recordVirtualTrade({
+        botId: bot.id,
+        stockId: position.stock_id,
+        signalId: analysis.signalId,
+        side: "sell",
+        quantity,
+        price: latestPrice,
+        realizedPnl: tradeRealizedPnl,
+        reason: `自動決済: ${analysis.signalType}`,
+      });
+      await supabase(`virtual_positions?id=eq.${position.id}`, { method: "DELETE" });
+      positionMap.delete(position.stock_id);
+    }
+
+    const remainingPositionCount = positionMap.size;
+    const equityBeforeBuys = round(cash + [...positionMap.values()].reduce((sum, position) => {
+      const latestPrice = priceMap.get(position.stock_id) ?? toNumber(position.last_price);
+      return sum + latestPrice * position.quantity;
+    }, 0));
+
+    const candidates = rows
+      .filter((row) => row.signalType === "買い候補" && !positionMap.has(row.stock.id) && (row.price ?? 0) > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, Math.max(0, VIRTUAL_BOT_MAX_POSITIONS - remainingPositionCount));
+
+    for (const candidate of candidates) {
+      if (positionMap.size >= VIRTUAL_BOT_MAX_POSITIONS) break;
+      const price = candidate.price ?? 0;
+      if (price <= 0) continue;
+
+      const desiredAmount = Math.min(cash, Math.max(VIRTUAL_BOT_MIN_TRADE_AMOUNT, equityBeforeBuys * VIRTUAL_BOT_POSITION_RATIO));
+      const quantity = Math.floor(desiredAmount / price);
+      if (quantity <= 0) continue;
+
+      const grossAmount = round(quantity * price);
+      if (grossAmount > cash || grossAmount < VIRTUAL_BOT_MIN_TRADE_AMOUNT) continue;
+
+      cash = round(cash - grossAmount);
+      const created = await supabase("virtual_positions", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify([{
+          bot_id: bot.id,
+          stock_id: candidate.stock.id,
+          quantity,
+          avg_cost: round(price),
+          last_price: round(price),
+          market_value: grossAmount,
+          unrealized_pnl: 0,
+          opened_at: new Date().toISOString(),
+        }]),
+      }) as VirtualPosition[];
+      if (created[0]) {
+        positionMap.set(candidate.stock.id, created[0]);
+      }
+      await recordVirtualTrade({
+        botId: bot.id,
+        stockId: candidate.stock.id,
+        signalId: candidate.signalId,
+        side: "buy",
+        quantity,
+        price,
+        reason: `自動エントリー: ${candidate.signalType} ${candidate.score}点`,
+      });
+    }
+
+    let unrealizedPnl = 0;
+    let marketValue = 0;
+    for (const position of positionMap.values()) {
+      const latestPrice = priceMap.get(position.stock_id) ?? toNumber(position.last_price);
+      const avgCost = toNumber(position.avg_cost);
+      const currentMarketValue = round(position.quantity * latestPrice);
+      const currentUnrealizedPnl = round((latestPrice - avgCost) * position.quantity);
+      marketValue = round(marketValue + currentMarketValue);
+      unrealizedPnl = round(unrealizedPnl + currentUnrealizedPnl);
+
+      await supabase(`virtual_positions?id=eq.${position.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          last_price: round(latestPrice),
+          market_value: currentMarketValue,
+          unrealized_pnl: currentUnrealizedPnl,
+        }),
+      });
+    }
+
+    await supabase(`virtual_bots?id=eq.${bot.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        cash_balance: round(cash),
+        realized_pnl: round(realizedPnl),
+        latest_equity: round(cash + marketValue),
+        latest_valuation_at: new Date().toISOString(),
+      }),
+    });
+  }
+}
+
 Deno.serve(async (request) => {
   try {
     if (!RUN_SIGNAL_BOT_SECRET) {
@@ -779,6 +1002,7 @@ Deno.serve(async (request) => {
     const idToken = MARKET_DATA_PROVIDER === "jquants" ? await getJQuantsIdToken() : null;
     let notificationCount = 0;
     const summaryRows: SummaryRow[] = [];
+    const virtualAnalyses: VirtualAnalysisRow[] = [];
     for (const stock of stocks) {
       const candles = await getMarketCandles(stock, idToken);
       const intradayCandles = MARKET_DATA_PROVIDER === "yahoo" ? await fetchYahooIntradayCandles(stock) : [];
@@ -844,6 +1068,13 @@ Deno.serve(async (request) => {
         headers: { Prefer: "return=representation" },
         body: JSON.stringify([{ stock_id: stock.id, ...signal }]),
       }) as Array<{ id: number }>;
+      virtualAnalyses.push({
+        stock,
+        signalId: inserted[0]?.id ?? null,
+        signalType: signal.signal_type,
+        score: signal.score,
+        price: indicators.latest_close,
+      });
       await supabase(`stocks?id=eq.${stock.id}`, {
         method: "PATCH",
         body: JSON.stringify({ last_signal: signal.signal_type, last_data_at: latestQuote?.ts ?? new Date().toISOString() }),
@@ -864,6 +1095,7 @@ Deno.serve(async (request) => {
         }
       }
     }
+    await runVirtualPortfolioBot(virtualAnalyses);
     if (notifySummary && summaryRows[0]) {
       const summaryResult = await sendSummaryNotifications(summaryRows);
       notificationCount += summaryResult.sent;

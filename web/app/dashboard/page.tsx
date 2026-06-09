@@ -13,17 +13,29 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: stocks }, { data: signals }, { data: notifications }, { data: runs }] = await Promise.all([
+  const [{ data: stocks }, { data: signals }, { data: notifications }, { data: runs }, { data: virtualBot }, { data: virtualPositions }] = await Promise.all([
     supabase.from("latest_stock_signals").select("*").order("score", { ascending: false, nullsFirst: false }).limit(10),
     supabase.from("signals").select("*, stocks(code,name)").order("id", { ascending: false }).limit(10),
     supabase.from("notification_history").select("*, stocks(code,name)").order("id", { ascending: false }).limit(8),
     supabase.from("bot_runs").select("*").order("id", { ascending: false }).limit(1),
+    supabase.from("virtual_bots").select("*").eq("user_id", user.id).maybeSingle(),
+    supabase.from("virtual_positions").select("*, stocks(code,name)").order("opened_at", { ascending: false }),
   ]);
-  const liveQuotes = await fetchLiveQuoteMap((stocks ?? []).map((stock) => stock.code));
+  const quoteCodes = Array.from(new Set([...(stocks ?? []).map((stock) => stock.code), ...((virtualPositions ?? []).map((position) => position.stocks?.code).filter(Boolean) as string[])]));
+  const liveQuotes = await fetchLiveQuoteMap(quoteCodes);
 
   const buyCount = signals?.filter((signal) => signal.signal_type === "買い候補").length ?? 0;
   const sellCount = signals?.filter((signal) => signal.signal_type === "利確売り候補").length ?? 0;
   const cutCount = signals?.filter((signal) => ["損切り候補", "撤退検討", "下落リスク上昇"].includes(signal.signal_type)).length ?? 0;
+  const virtualCash = Number(virtualBot?.cash_balance ?? 100000);
+  const virtualInitial = Number(virtualBot?.initial_cash ?? 100000);
+  const virtualMarketValue = (virtualPositions ?? []).reduce((sum, position) => {
+    const live = liveQuotes.get(position.stocks?.code ?? "");
+    const price = Number(live?.price ?? position.last_price ?? 0);
+    return sum + price * Number(position.quantity ?? 0);
+  }, 0);
+  const virtualEquity = virtualCash + virtualMarketValue;
+  const virtualReturnPct = virtualInitial > 0 ? ((virtualEquity - virtualInitial) / virtualInitial) * 100 : 0;
 
   return (
     <main>
@@ -61,6 +73,10 @@ export default async function DashboardPage() {
         <div className="metric">
           <span className="muted">最終実行</span>
           <b style={{ fontSize: 16 }}>{runs?.[0]?.created_at ? new Date(runs[0].created_at).toLocaleString("ja-JP") : "-"}</b>
+        </div>
+        <div className="metric">
+          <span className="muted">仮想資産</span>
+          <b>{formatNumber(virtualEquity)}円</b>
         </div>
       </section>
 
@@ -107,6 +123,23 @@ export default async function DashboardPage() {
           <p>
             <Link href="/stocks">銘柄管理へ</Link>
           </p>
+        </div>
+
+        <div className="panel">
+          <h1>仮想bot</h1>
+          <article>
+            <strong>初期資金 100,000円</strong>
+            <p className="muted">
+              現在資産 {formatNumber(virtualEquity)}円 / 騰落率{" "}
+              <span className={virtualReturnPct >= 0 ? "price-up" : "price-down"}>{formatNumber(virtualReturnPct)}%</span>
+            </p>
+            <p className="muted">
+              現金 {formatNumber(virtualCash)}円 / 保有銘柄 {(virtualPositions ?? []).length}件
+            </p>
+            <p>
+              <Link href="/virtual-bot">仮想botの詳細へ</Link>
+            </p>
+          </article>
         </div>
 
         <div className="panel">
