@@ -19,7 +19,7 @@ export type StrategyConfig = {
 
 export const STRATEGY_CONFIG: StrategyConfig = {
   version: 1,
-  updatedAt: "2026-07-05T08:54:45.196Z",
+  updatedAt: "2026-07-05T09:09:32.416Z",
   source: "research-2015-yahoo",
   dailyBacktest: {
     maShort: 4,
@@ -27,7 +27,7 @@ export const STRATEGY_CONFIG: StrategyConfig = {
     breakoutLookback: 10,
     breakoutBuffer: 0.995,
     volumeLookback: 20,
-    volumeThreshold: 1.1,
+    volumeThreshold: 1.2,
     takeProfitPct: 0.04,
     stopLossPct: 0.03,
     maxHoldBars: 15,
