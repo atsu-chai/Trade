@@ -1,0 +1,57 @@
+{
+  "generatedAt": "2026-07-05T07:20:06.838Z",
+  "source": "research-2015-yahoo",
+  "universeSize": 12,
+  "baseline": {
+    "train": {
+      "score": 14.863780323472232,
+      "expectancyPct": 0.20499556881940603,
+      "winRate": 54.048209239938565,
+      "profitFactor": 1.21627222909583,
+      "maxDrawdownPct": -16.418494358030493,
+      "tradeCount": 60.75,
+      "terminalEquity": 1.1106327106687859
+    },
+    "validation": {
+      "score": 1.410358342265148,
+      "expectancyPct": -0.13761869442475347,
+      "winRate": 48.62951092117759,
+      "profitFactor": 0.9556127587876838,
+      "maxDrawdownPct": -11.827045396839198,
+      "tradeCount": 17.5,
+      "terminalEquity": 0.9791143888852902
+    }
+  },
+  "best": {
+    "config": {
+      "maShort": 4,
+      "maBase": 15,
+      "breakoutLookback": 10,
+      "breakoutBuffer": 0.995,
+      "volumeLookback": 20,
+      "volumeThreshold": 1.1,
+      "takeProfitPct": 0.03,
+      "stopLossPct": 0.03,
+      "maxHoldBars": 15
+    },
+    "train": {
+      "score": 15.446857300600366,
+      "expectancyPct": 0.17298248275850658,
+      "winRate": 53.18368301222328,
+      "profitFactor": 1.1342318150045432,
+      "maxDrawdownPct": -23.566568802936427,
+      "tradeCount": 95.75,
+      "terminalEquity": 1.1393492384205643
+    },
+    "validation": {
+      "score": 10.629686776798346,
+      "expectancyPct": 0.15937567817775208,
+      "winRate": 53.43238470872115,
+      "profitFactor": 1.190438354218985,
+      "maxDrawdownPct": -12.739313128682754,
+      "tradeCount": 27,
+      "terminalEquity": 1.0550488982851778
+    },
+    "adopted": true
+  }
+}

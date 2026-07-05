@@ -1,3 +1,5 @@
+import { STRATEGY_CONFIG } from "../../config/strategy-config";
+
 type Candle = {
   ts: string;
   open: number | string;
@@ -60,6 +62,7 @@ function maxDrawdown(equity: number[]) {
 }
 
 export function runBacktest(candles: Candle[]): BacktestResult {
+  const config = STRATEGY_CONFIG.dailyBacktest;
   const normalized = candles
     .map((candle) => ({
       ts: candle.ts,
@@ -74,21 +77,21 @@ export function runBacktest(candles: Candle[]): BacktestResult {
   const closes = normalized.map((candle) => candle.close);
   const volumes = normalized.map((candle) => candle.volume);
   const trades: BacktestTrade[] = [];
-  let index = 25;
+  let index = Math.max(config.maBase, config.breakoutLookback, config.volumeLookback) + 1;
 
   while (index < normalized.length - 2) {
-    const ma5 = sma(closes, index, 5);
-    const ma25 = sma(closes, index, 25);
-    const ratio = volumeRatio(volumes, index);
-    const previousHigh = Math.max(...closes.slice(Math.max(0, index - 20), index));
+    const ma5 = sma(closes, index, config.maShort);
+    const ma25 = sma(closes, index, config.maBase);
+    const ratio = volumeRatio(volumes, index, config.volumeLookback);
+    const previousHigh = Math.max(...closes.slice(Math.max(0, index - config.breakoutLookback), index));
     const isEntry =
       ma5 !== null &&
       ma25 !== null &&
       ratio !== null &&
       closes[index] > ma5 &&
       ma5 > ma25 &&
-      ratio >= 1.3 &&
-      closes[index] >= previousHigh * 0.995;
+      ratio >= config.volumeThreshold &&
+      closes[index] >= previousHigh * config.breakoutBuffer;
 
     if (!isEntry) {
       index += 1;
@@ -97,13 +100,13 @@ export function runBacktest(candles: Candle[]): BacktestResult {
 
     const entryIndex = index + 1;
     const entryPrice = normalized[entryIndex].open;
-    const takeProfit = entryPrice * 1.03;
-    const stopLoss = entryPrice * 0.97;
-    let exitIndex = Math.min(entryIndex + 10, normalized.length - 1);
+    const takeProfit = entryPrice * (1 + config.takeProfitPct);
+    const stopLoss = entryPrice * (1 - config.stopLossPct);
+    let exitIndex = Math.min(entryIndex + config.maxHoldBars, normalized.length - 1);
     let exitPrice = normalized[exitIndex].close;
     let reason = "時間切れ";
 
-    for (let cursor = entryIndex; cursor <= Math.min(entryIndex + 10, normalized.length - 1); cursor += 1) {
+    for (let cursor = entryIndex; cursor <= Math.min(entryIndex + config.maxHoldBars, normalized.length - 1); cursor += 1) {
       const candle = normalized[cursor];
       if (candle.low <= stopLoss) {
         exitIndex = cursor;

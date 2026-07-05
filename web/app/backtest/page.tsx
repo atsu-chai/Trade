@@ -53,7 +53,8 @@ export default async function BacktestPage({ searchParams }: { searchParams: Pro
       </section>
 
       <section className="notice">
-        <strong>検証ルール:</strong> 過去1年間の日足を対象に、翌足始値でエントリー、+3%で利確、-3%で損切り、最大10本で時間切れ決済。手数料と税金は未考慮です。
+        <strong>検証ルール:</strong> 過去データ研究で更新される共通設定を使い、翌足始値でエントリーします。利確・損切り・保有本数は `config/strategy-config.ts`
+        の値に従います。手数料と税金は未考慮です。
       </section>
 
       {!selectedStock ? (
