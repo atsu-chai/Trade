@@ -4,6 +4,7 @@ import path from "node:path";
 const ROOT = process.cwd();
 const STOCK_MASTER_PATH = path.join(ROOT, "web/lib/stock-master.ts");
 const CONFIG_PATH = path.join(ROOT, "config/strategy-config.ts");
+const EDGE_CONFIG_PATH = path.join(ROOT, "supabase/functions/run-signal-bot/strategy-config.ts");
 const REPORT_DIR = path.join(ROOT, "data/research");
 const REPORT_PATH = path.join(REPORT_DIR, "latest-report.json");
 const FROM_DATE = "2015-01-01";
@@ -399,7 +400,9 @@ async function main() {
   }
 
   if (best.adopted) {
-    await fs.writeFile(CONFIG_PATH, renderConfigFile(best.config, "research-2015-yahoo"), "utf8");
+    const renderedConfig = renderConfigFile(best.config, "research-2015-yahoo");
+    await fs.writeFile(CONFIG_PATH, renderedConfig, "utf8");
+    await fs.writeFile(EDGE_CONFIG_PATH, renderedConfig, "utf8");
   }
 
   const report = {
