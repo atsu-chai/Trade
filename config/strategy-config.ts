@@ -19,11 +19,11 @@ export type StrategyConfig = {
 
 export const STRATEGY_CONFIG: StrategyConfig = {
   version: 1,
-  updatedAt: "2026-07-05T09:24:21.893Z",
+  updatedAt: "2026-07-05T09:49:25.636Z",
   source: "research-2015-yahoo",
   dailyBacktest: {
     maShort: 4,
-    maBase: 30,
+    maBase: 15,
     breakoutLookback: 30,
     breakoutBuffer: 0.995,
     volumeLookback: 20,

@@ -11,6 +11,7 @@ const VALIDATION_FROM = "2024-01-01";
 const MAX_UNIVERSE = Number(process.env.RESEARCH_UNIVERSE_SIZE ?? "24");
 const MAX_CANDIDATES = Number(process.env.RESEARCH_CANDIDATES ?? "40");
 const RESEARCH_SEED = Number(process.env.RESEARCH_SEED ?? "1");
+const FETCH_RETRIES = Number(process.env.RESEARCH_FETCH_RETRIES ?? "3");
 
 function average(values) {
   if (!values.length) return 0;
@@ -23,6 +24,31 @@ function createSeededRandom(seed) {
     state = (state * 1664525 + 1013904223) >>> 0;
     return state / 2 ** 32;
   };
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchJsonWithRetry(url, init, retries = FETCH_RETRIES) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      const response = await fetch(url, init);
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        lastError = new Error(`HTTP ${response.status}`);
+      } else {
+        return { response, body };
+      }
+    } catch (error) {
+      lastError = error;
+    }
+    if (attempt < retries) {
+      await sleep(750 * attempt);
+    }
+  }
+  throw lastError ?? new Error("fetch failed");
 }
 
 function sma(values, end, period) {
@@ -167,11 +193,15 @@ async function fetchYahooDailyCandles(code) {
         events: "history",
         includeAdjustedClose: "true",
       });
-      const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?${params}`, {
-        headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" },
-      });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) continue;
+      let response;
+      let body;
+      try {
+        ({ response, body } = await fetchJsonWithRetry(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?${params}`, {
+          headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" },
+        }));
+      } catch {
+        continue;
+      }
       const result = body.chart?.result?.[0];
       const quote = result?.indicators?.quote?.[0];
       if (!result?.timestamp?.length || !quote) continue;
