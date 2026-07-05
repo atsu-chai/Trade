@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchLiveQuoteMap } from "@/lib/live-quotes";
+import { improvementText, readResearchStatus } from "@/lib/research-status";
 import { badgeClass, formatNumber } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,8 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  const research = await readResearchStatus();
+  const improvement = research ? improvementText(research) : null;
 
   const [{ data: stocks }, { data: signals }, { data: notifications }, { data: runs }, { data: virtualBot }, { data: virtualPositions }] = await Promise.all([
     supabase.from("latest_stock_signals").select("*").order("score", { ascending: false, nullsFirst: false }).limit(10),
@@ -78,6 +81,12 @@ export default async function DashboardPage() {
           <span className="muted">仮想資産</span>
           <b>{formatNumber(virtualEquity)}円</b>
         </div>
+        <div className="metric">
+          <span className="muted">研究改善率</span>
+          <b className={(improvement?.diffPct ?? 0) >= 0 ? "price-up" : "price-down"}>
+            {improvement ? `${formatNumber(improvement.diffPct)}%` : "-"}
+          </b>
+        </div>
       </section>
 
       <section className="grid two">
@@ -123,6 +132,41 @@ export default async function DashboardPage() {
           <p>
             <Link href="/stocks">銘柄管理へ</Link>
           </p>
+        </div>
+
+        <div className="panel">
+          <h1>研究ステータス</h1>
+          {research ? (
+            <>
+              <p className="muted">
+                {new Date(research.generatedAt).toLocaleString("ja-JP")} / {research.source}
+              </p>
+              <div className="research-status-grid">
+                <div>
+                  <span className="muted">検証前</span>
+                  <strong>{formatNumber(improvement?.before)}x</strong>
+                </div>
+                <div>
+                  <span className="muted">検証後</span>
+                  <strong>{formatNumber(improvement?.after)}x</strong>
+                </div>
+                <div>
+                  <span className="muted">期待値</span>
+                  <strong>{formatNumber(research.best.validation.expectancyPct)}%</strong>
+                </div>
+                <div>
+                  <span className="muted">検証銘柄</span>
+                  <strong>{research.universeSize}</strong>
+                </div>
+              </div>
+              <p className="muted">
+                MA {research.best.config.maShort}/{research.best.config.maBase} / 高値 {research.best.config.breakoutLookback}本 /
+                出来高 {formatNumber(research.best.config.volumeThreshold)}倍 / 利確 {formatNumber(research.best.config.takeProfitPct * 100)}%
+              </p>
+            </>
+          ) : (
+            <div className="empty">研究レポートはまだありません。</div>
+          )}
         </div>
 
         <div className="panel">
