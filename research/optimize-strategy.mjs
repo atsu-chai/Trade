@@ -10,10 +10,19 @@ const FROM_DATE = "2015-01-01";
 const VALIDATION_FROM = "2024-01-01";
 const MAX_UNIVERSE = Number(process.env.RESEARCH_UNIVERSE_SIZE ?? "24");
 const MAX_CANDIDATES = Number(process.env.RESEARCH_CANDIDATES ?? "40");
+const RESEARCH_SEED = Number(process.env.RESEARCH_SEED ?? "1");
 
 function average(values) {
   if (!values.length) return 0;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function createSeededRandom(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 2 ** 32;
+  };
 }
 
 function sma(values, end, period) {
@@ -289,6 +298,11 @@ function createCandidatePool() {
   }
 
   candidates.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  const random = createSeededRandom(RESEARCH_SEED);
+  for (let index = candidates.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [candidates[index], candidates[swapIndex]] = [candidates[swapIndex], candidates[index]];
+  }
   return candidates.slice(0, MAX_CANDIDATES);
 }
 
@@ -361,6 +375,7 @@ async function main() {
   const report = {
     generatedAt: new Date().toISOString(),
     source: "research-2015-yahoo",
+    seed: RESEARCH_SEED,
     universeSize: datasets.length,
     baseline,
     best,

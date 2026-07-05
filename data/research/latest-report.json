@@ -1,57 +1,58 @@
 {
-  "generatedAt": "2026-07-05T09:09:32.420Z",
+  "generatedAt": "2026-07-05T09:26:01.174Z",
   "source": "research-2015-yahoo",
-  "universeSize": 39,
+  "seed": 548957,
+  "universeSize": 6,
   "baseline": {
     "train": {
-      "score": -1.6048243696090612,
-      "expectancyPct": 0.0354186494227377,
-      "winRate": 44.25566366921141,
-      "profitFactor": 1.0466843621278115,
-      "maxDrawdownPct": -30.70119502160889,
-      "tradeCount": 89.92307692307692,
-      "terminalEquity": 1.0398501905572777
+      "score": 17.59182489284805,
+      "expectancyPct": 0.2550418337237486,
+      "winRate": 47.47560349255264,
+      "profitFactor": 1.173818733810024,
+      "maxDrawdownPct": -20.566598892485626,
+      "tradeCount": 66,
+      "terminalEquity": 1.1504245276769751
     },
     "validation": {
-      "score": 3.351407006760408,
-      "expectancyPct": 0.01926930419968033,
-      "winRate": 44.32943414639855,
-      "profitFactor": 1.0906686956601892,
-      "maxDrawdownPct": -16.350093297507776,
-      "tradeCount": 25.307692307692307,
-      "terminalEquity": 1.0100105861938788
+      "score": 16.59692819125408,
+      "expectancyPct": 0.4555342913262647,
+      "winRate": 50.35560227405094,
+      "profitFactor": 1.366518017659045,
+      "maxDrawdownPct": -13.746415194353204,
+      "tradeCount": 24.833333333333332,
+      "terminalEquity": 1.1057042287267063
     }
   },
   "best": {
     "config": {
       "maShort": 4,
-      "maBase": 15,
-      "breakoutLookback": 10,
+      "maBase": 30,
+      "breakoutLookback": 30,
       "breakoutBuffer": 0.995,
       "volumeLookback": 20,
-      "volumeThreshold": 1.2,
+      "volumeThreshold": 1.1,
       "takeProfitPct": 0.04,
       "stopLossPct": 0.03,
       "maxHoldBars": 15
     },
     "train": {
-      "score": -1.2212587999707625,
-      "expectancyPct": 0.03318009898030727,
-      "winRate": 44.128689665839744,
-      "profitFactor": 1.045905991159128,
-      "maxDrawdownPct": -29.735247146016427,
-      "tradeCount": 77.97435897435898,
-      "terminalEquity": 1.0326962203361225
+      "score": 17.59182489284805,
+      "expectancyPct": 0.2550418337237486,
+      "winRate": 47.47560349255264,
+      "profitFactor": 1.173818733810024,
+      "maxDrawdownPct": -20.566598892485626,
+      "tradeCount": 66,
+      "terminalEquity": 1.1504245276769751
     },
     "validation": {
-      "score": 4.096928727306165,
-      "expectancyPct": 0.03633795643152586,
-      "winRate": 44.116334626579224,
-      "profitFactor": 1.1003321958099652,
-      "maxDrawdownPct": -15.02197486017994,
-      "tradeCount": 21.923076923076923,
-      "terminalEquity": 1.0101801725506498
+      "score": 16.59692819125408,
+      "expectancyPct": 0.4555342913262647,
+      "winRate": 50.35560227405094,
+      "profitFactor": 1.366518017659045,
+      "maxDrawdownPct": -13.746415194353204,
+      "tradeCount": 24.833333333333332,
+      "terminalEquity": 1.1057042287267063
     },
-    "adopted": true
+    "adopted": false
   }
 }
