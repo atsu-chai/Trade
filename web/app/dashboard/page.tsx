@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchLiveQuoteMap } from "@/lib/live-quotes";
 import { improvementText, readResearchStatus } from "@/lib/research-status";
 import { badgeClass, formatNumber } from "@/lib/ui";
+import { HorizontalBars, MiniLineChart, RingGauge, SignalDonut } from "@/components/visuals";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export default async function DashboardPage() {
   const buyCount = signals?.filter((signal) => signal.signal_type === "買い候補").length ?? 0;
   const sellCount = signals?.filter((signal) => signal.signal_type === "利確売り候補").length ?? 0;
   const cutCount = signals?.filter((signal) => ["損切り候補", "撤退検討", "下落リスク上昇"].includes(signal.signal_type)).length ?? 0;
+  const neutralCount = Math.max((signals?.length ?? 0) - buyCount - sellCount - cutCount, 0);
   const virtualCash = Number(virtualBot?.cash_balance ?? 100000);
   const virtualInitial = Number(virtualBot?.initial_cash ?? 100000);
   const virtualMarketValue = (virtualPositions ?? []).reduce((sum, position) => {
@@ -86,6 +88,73 @@ export default async function DashboardPage() {
           <b className={(improvement?.diffPct ?? 0) >= 0 ? "price-up" : "price-down"}>
             {improvement ? `${formatNumber(improvement.diffPct)}%` : "-"}
           </b>
+        </div>
+      </section>
+
+      <section className="visual-dashboard">
+        <div className="panel signal-panel">
+          <div className="section-title">
+            <div>
+              <p className="eyebrow">Signals</p>
+              <h2>シグナル構成</h2>
+            </div>
+            <span className="muted">直近10件</span>
+          </div>
+          <SignalDonut
+            items={[
+              { label: "買い", value: buyCount, color: "#147a4a" },
+              { label: "利確", value: sellCount, color: "#a76500" },
+              { label: "撤退", value: cutCount, color: "#b42318" },
+              { label: "その他", value: neutralCount, color: "#64748b" },
+            ]}
+          />
+        </div>
+
+        <div className="panel">
+          <div className="section-title">
+            <div>
+              <p className="eyebrow">Virtual Bot</p>
+              <h2>10万円運用</h2>
+            </div>
+            <span className={virtualReturnPct >= 0 ? "price-up" : "price-down"}>{formatNumber(virtualReturnPct)}%</span>
+          </div>
+          <MiniLineChart
+            points={[
+              { label: "初期", value: virtualInitial },
+              { label: "現金", value: virtualCash },
+              { label: "現在", value: virtualEquity },
+            ]}
+            suffix="円"
+          />
+        </div>
+
+        <div className="panel">
+          <div className="section-title">
+            <div>
+              <p className="eyebrow">Research</p>
+              <h2>学習結果</h2>
+            </div>
+            <span>{research ? `${research.universeSize}銘柄` : "-"}</span>
+          </div>
+          {research ? (
+            <div className="research-visual-grid">
+              <RingGauge
+                value={Math.max(0, Math.min(100, (research.best.validation.score ?? 0) * 8))}
+                label="総合スコア"
+                detail={`Score ${formatNumber(research.best.validation.score)}`}
+                color="#2563eb"
+              />
+              <HorizontalBars
+                bars={[
+                  { label: "期待値", value: Math.max(0, research.best.validation.expectancyPct * 100), color: "#087f8c" },
+                  { label: "勝率", value: research.best.validation.winRate ?? 0, color: "#147a4a" },
+                  { label: "取引数", value: research.best.validation.tradeCount, color: "#64748b" },
+                ]}
+              />
+            </div>
+          ) : (
+            <div className="empty">研究レポートはまだありません。</div>
+          )}
         </div>
       </section>
 

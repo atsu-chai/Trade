@@ -126,6 +126,13 @@ main,
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.hero-visual {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(160px, 0.7fr) minmax(220px, 1.3fr);
+  min-width: 0;
+}
+
 .hero-stat {
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid #d9e5ea;
@@ -508,6 +515,293 @@ button.candidate-chip:hover {
   font-size: 24px;
 }
 
+.visual-strip {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 18px;
+  overflow: hidden;
+}
+
+.visual-strip > div {
+  border-right: 1px solid var(--line);
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.visual-strip > div:last-child {
+  border-right: 0;
+}
+
+.visual-strip strong {
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+.visual-dashboard {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(320px, 1.15fr) minmax(320px, 1.1fr);
+  margin-bottom: 18px;
+}
+
+.section-title {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.section-title h2 {
+  margin: 0;
+}
+
+.visual-card,
+.line-chart,
+.donut-wrap {
+  background: #f8fbfd;
+  border: 1px solid #dce7ec;
+  border-radius: 8px;
+  margin: 0;
+  min-width: 0;
+}
+
+.visual-card {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  padding: 14px;
+}
+
+.visual-card figcaption {
+  display: grid;
+  gap: 3px;
+  text-align: center;
+}
+
+.visual-card figcaption span,
+.chart-caption,
+.donut-legend {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.gauge-card svg,
+.donut-wrap svg {
+  height: auto;
+  max-width: 180px;
+  overflow: visible;
+  width: 100%;
+}
+
+.gauge-track {
+  fill: none;
+  stroke: #d8e2ea;
+  stroke-width: 12;
+}
+
+.gauge-value,
+.donut-segment {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 12;
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
+.gauge-number {
+  fill: var(--text);
+  font-size: 25px;
+  font-weight: 900;
+}
+
+.gauge-unit {
+  fill: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.line-chart {
+  padding: 10px;
+}
+
+.line-chart svg {
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.line-path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+}
+
+.line-fill {
+  fill: rgba(8, 127, 140, 0.12);
+}
+
+.line-chart circle {
+  fill: #ffffff;
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.chart-caption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0 4px 4px;
+}
+
+.h-bars {
+  display: grid;
+  gap: 13px;
+}
+
+.h-bar-row {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(94px, 130px) minmax(120px, 1fr) minmax(34px, auto);
+}
+
+.h-bar-row span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.h-bar-track {
+  background: #e5edf3;
+  border-radius: 6px;
+  height: 12px;
+  overflow: hidden;
+}
+
+.h-bar-track i {
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+}
+
+.h-bar-row b {
+  font-size: 13px;
+  text-align: right;
+}
+
+.donut-wrap {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  padding: 12px;
+}
+
+.donut-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  justify-content: center;
+}
+
+.donut-legend span {
+  align-items: center;
+  display: inline-flex;
+  gap: 5px;
+}
+
+.donut-legend i {
+  border-radius: 3px;
+  display: inline-block;
+  height: 10px;
+  width: 10px;
+}
+
+.comparison-grid,
+.research-visual-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.risk-reward {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 16px;
+}
+
+.risk-reward > div {
+  background: #f8fbfd;
+  border: 1px solid #dce7ec;
+  border-radius: 8px;
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+}
+
+.risk-reward span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.risk-reward strong {
+  font-size: 22px;
+}
+
+.flow-band {
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 18px;
+}
+
+.flow-band > div {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-right: 0;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.flow-band > div:first-child {
+  border-radius: 8px 0 0 8px;
+}
+
+.flow-band > div:last-child {
+  border-radius: 0 8px 8px 0;
+  border-right: 1px solid var(--line);
+}
+
+.flow-band span {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.flow-band strong {
+  font-size: 18px;
+}
+
+.flow-band p {
+  color: var(--muted);
+  margin: 0;
+}
+
 @media (max-width: 820px) {
   .topbar,
   .page-head,
@@ -522,8 +816,26 @@ button.candidate-chip:hover {
   .metrics,
   .hero,
   .hero-grid,
-  .research-status-grid {
+  .hero-visual,
+  .research-status-grid,
+  .visual-strip,
+  .visual-dashboard,
+  .comparison-grid,
+  .research-visual-grid,
+  .risk-reward,
+  .flow-band {
     grid-template-columns: 1fr;
+  }
+
+  .visual-strip > div,
+  .flow-band > div {
+    border-right: 1px solid var(--line);
+  }
+
+  .flow-band > div,
+  .flow-band > div:first-child,
+  .flow-band > div:last-child {
+    border-radius: 8px;
   }
 
   .page-head h1 {

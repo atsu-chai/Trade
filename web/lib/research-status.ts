@@ -9,6 +9,7 @@ export type ResearchSummary = {
     validation: {
       score: number;
       expectancyPct: number;
+      winRate?: number;
       terminalEquity: number;
       tradeCount: number;
     };
@@ -26,6 +27,7 @@ export type ResearchSummary = {
     validation: {
       score: number;
       expectancyPct: number;
+      winRate?: number;
       terminalEquity: number;
       tradeCount: number;
     };
