@@ -1,12 +1,18 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { RingGauge } from "@/components/visuals";
 import { createClient } from "@/lib/supabase/server";
 import { fetchLiveQuoteMap } from "@/lib/live-quotes";
-import { improvementText, readResearchStatus } from "@/lib/research-status";
 import { badgeClass, formatNumber } from "@/lib/ui";
-import { HorizontalBars, MiniLineChart, RingGauge, SignalDonut } from "@/components/visuals";
 
 export const dynamic = "force-dynamic";
+
+const runLabels: Record<string, string> = {
+  queued: "実行待ち",
+  running: "Web調査中",
+  completed: "調査完了",
+  failed: "要確認",
+};
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -14,261 +20,91 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const research = await readResearchStatus();
-  const improvement = research ? improvementText(research) : null;
 
-  const [{ data: stocks }, { data: signals }, { data: notifications }, { data: runs }, { data: virtualBot }, { data: virtualPositions }] = await Promise.all([
-    supabase.from("latest_stock_signals").select("*").order("score", { ascending: false, nullsFirst: false }).limit(10),
-    supabase.from("signals").select("*, stocks(code,name)").order("id", { ascending: false }).limit(10),
-    supabase.from("notification_history").select("*, stocks(code,name)").order("id", { ascending: false }).limit(8),
-    supabase.from("bot_runs").select("*").order("id", { ascending: false }).limit(1),
+  const [{ data: stocks }, { data: bot }, { data: positions }, { data: profile }, { data: loopRuns }, { data: botRuns }] = await Promise.all([
+    supabase.from("latest_stock_signals").select("*").order("score", { ascending: false, nullsFirst: false }).limit(8),
     supabase.from("virtual_bots").select("*").eq("user_id", user.id).maybeSingle(),
     supabase.from("virtual_positions").select("*, stocks(code,name)").order("opened_at", { ascending: false }),
+    supabase.from("investment_profiles").select("*").eq("user_id", user.id).maybeSingle(),
+    supabase.from("analysis_loop_runs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
+    supabase.from("bot_runs").select("*").order("id", { ascending: false }).limit(1),
   ]);
-  const quoteCodes = Array.from(new Set([...(stocks ?? []).map((stock) => stock.code), ...((virtualPositions ?? []).map((position) => position.stocks?.code).filter(Boolean) as string[])]));
+  const latestLoop = loopRuns?.[0] ?? null;
+  const { data: candidates } = latestLoop
+    ? await supabase.from("analysis_loop_candidates").select("*").eq("run_id", latestLoop.id).eq("iteration", latestLoop.completed_iterations).order("score", { ascending: false }).limit(3)
+    : { data: [] };
+  const quoteCodes = Array.from(new Set([...(stocks ?? []).map((stock) => stock.code), ...((positions ?? []).map((position) => position.stocks?.code).filter(Boolean) as string[])]));
   const liveQuotes = await fetchLiveQuoteMap(quoteCodes);
-
-  const buyCount = signals?.filter((signal) => signal.signal_type === "買い候補").length ?? 0;
-  const sellCount = signals?.filter((signal) => signal.signal_type === "利確売り候補").length ?? 0;
-  const cutCount = signals?.filter((signal) => ["損切り候補", "撤退検討", "下落リスク上昇"].includes(signal.signal_type)).length ?? 0;
-  const neutralCount = Math.max((signals?.length ?? 0) - buyCount - sellCount - cutCount, 0);
-  const virtualCash = Number(virtualBot?.cash_balance ?? 100000);
-  const virtualInitial = Number(virtualBot?.initial_cash ?? 100000);
-  const virtualMarketValue = (virtualPositions ?? []).reduce((sum, position) => {
-    const live = liveQuotes.get(position.stocks?.code ?? "");
-    const price = Number(live?.price ?? position.last_price ?? 0);
+  const budget = Number(profile?.budget_yen ?? 10000);
+  const cash = Number(bot?.cash_balance ?? 10000);
+  const initial = Number(bot?.initial_cash ?? 10000);
+  const marketValue = (positions ?? []).reduce((sum, position) => {
+    const price = Number(liveQuotes.get(position.stocks?.code ?? "")?.price ?? position.last_price ?? 0);
     return sum + price * Number(position.quantity ?? 0);
   }, 0);
-  const virtualEquity = virtualCash + virtualMarketValue;
-  const virtualReturnPct = virtualInitial > 0 ? ((virtualEquity - virtualInitial) / virtualInitial) * 100 : 0;
+  const equity = cash + marketValue;
+  const returnPct = initial > 0 ? ((equity - initial) / initial) * 100 : 0;
+  const best = candidates?.[0] ?? null;
 
   return (
     <main>
       <section className="page-head">
         <div>
-          <p className="eyebrow">Dashboard</p>
-          <h1>ダッシュボード</h1>
-          <p className="muted">監視銘柄、最新シグナル、通知状況をまとめて確認します。</p>
+          <p className="eyebrow">Small-lot dashboard</p>
+          <h1>1万円投資ダッシュボード</h1>
+          <p className="muted">SBI証券のS株を前提に、買える金額と調査根拠だけを確認します。</p>
         </div>
-        <Link className="button" href="/settings">
-          手動実行
-        </Link>
+        <Link className="button" href="/loop">AI調査を開く</Link>
       </section>
-      <div className="notice">
-        <strong>免責:</strong> 本システムは投資助言ではありません。表示内容は売買を推奨・保証するものではなく、最終判断は利用者本人が行ってください。
-      </div>
+      <div className="notice"><strong>投資判断はご自身で行ってください。</strong> AI調査は注文を行わず、利益を保証しません。</div>
 
       <section className="grid metrics">
-        <div className="metric">
-          <span className="muted">監視銘柄</span>
-          <b>{stocks?.length ?? 0}</b>
-        </div>
-        <div className="metric">
-          <span className="muted">買い候補</span>
-          <b>{buyCount}</b>
-        </div>
-        <div className="metric">
-          <span className="muted">利確候補</span>
-          <b>{sellCount}</b>
-        </div>
-        <div className="metric">
-          <span className="muted">撤退系</span>
-          <b>{cutCount}</b>
-        </div>
-        <div className="metric">
-          <span className="muted">最終実行</span>
-          <b style={{ fontSize: 16 }}>{runs?.[0]?.created_at ? new Date(runs[0].created_at).toLocaleString("ja-JP") : "-"}</b>
-        </div>
-        <div className="metric">
-          <span className="muted">仮想資産</span>
-          <b>{formatNumber(virtualEquity)}円</b>
-        </div>
-        <div className="metric">
-          <span className="muted">研究改善率</span>
-          <b className={(improvement?.diffPct ?? 0) >= 0 ? "price-up" : "price-down"}>
-            {improvement ? `${formatNumber(improvement.diffPct)}%` : "-"}
-          </b>
-        </div>
-      </section>
-
-      <section className="visual-dashboard">
-        <div className="panel signal-panel">
-          <div className="section-title">
-            <div>
-              <p className="eyebrow">Signals</p>
-              <h2>シグナル構成</h2>
-            </div>
-            <span className="muted">直近10件</span>
-          </div>
-          <SignalDonut
-            items={[
-              { label: "買い", value: buyCount, color: "#147a4a" },
-              { label: "利確", value: sellCount, color: "#a76500" },
-              { label: "撤退", value: cutCount, color: "#b42318" },
-              { label: "その他", value: neutralCount, color: "#64748b" },
-            ]}
-          />
-        </div>
-
-        <div className="panel">
-          <div className="section-title">
-            <div>
-              <p className="eyebrow">Virtual Bot</p>
-              <h2>10万円運用</h2>
-            </div>
-            <span className={virtualReturnPct >= 0 ? "price-up" : "price-down"}>{formatNumber(virtualReturnPct)}%</span>
-          </div>
-          <MiniLineChart
-            points={[
-              { label: "初期", value: virtualInitial },
-              { label: "現金", value: virtualCash },
-              { label: "現在", value: virtualEquity },
-            ]}
-            suffix="円"
-          />
-        </div>
-
-        <div className="panel">
-          <div className="section-title">
-            <div>
-              <p className="eyebrow">Research</p>
-              <h2>学習結果</h2>
-            </div>
-            <span>{research ? `${research.universeSize}銘柄` : "-"}</span>
-          </div>
-          {research ? (
-            <div className="research-visual-grid">
-              <RingGauge
-                value={Math.max(0, Math.min(100, (research.best.validation.score ?? 0) * 8))}
-                label="総合スコア"
-                detail={`Score ${formatNumber(research.best.validation.score)}`}
-                color="#2563eb"
-              />
-              <HorizontalBars
-                bars={[
-                  { label: "期待値", value: Math.max(0, research.best.validation.expectancyPct * 100), color: "#087f8c" },
-                  { label: "勝率", value: research.best.validation.winRate ?? 0, color: "#147a4a" },
-                  { label: "取引数", value: research.best.validation.tradeCount, color: "#64748b" },
-                ]}
-              />
-            </div>
-          ) : (
-            <div className="empty">研究レポートはまだありません。</div>
-          )}
-        </div>
+        <div className="metric"><span className="muted">予算上限</span><b>{formatNumber(budget)}円</b></div>
+        <div className="metric"><span className="muted">仮想資産</span><b>{formatNumber(equity)}円</b></div>
+        <div className="metric"><span className="muted">仮想損益</span><b className={returnPct >= 0 ? "price-up" : "price-down"}>{formatNumber(returnPct)}%</b></div>
+        <div className="metric"><span className="muted">監視銘柄</span><b>{stocks?.length ?? 0}件</b></div>
+        <div className="metric"><span className="muted">価格更新</span><b style={{ fontSize: 15 }}>{botRuns?.[0]?.created_at ? new Date(botRuns[0].created_at).toLocaleString("ja-JP") : "-"}</b></div>
       </section>
 
       <section className="grid two">
-        <div className="panel">
-          <h1>高スコア銘柄</h1>
-          {stocks?.length ? <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>コード</th>
-                  <th>銘柄</th>
-                  <th>シグナル</th>
-                  <th>スコア</th>
-                  <th>最新価格</th>
-                  <th>取得時刻</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(stocks ?? []).map((stock) => {
-                  const live = liveQuotes.get(stock.code);
-                  return (
-                    <tr key={stock.id}>
-                      <td>{stock.code}</td>
-                      <td>{stock.name}</td>
-                      <td>
-                        <span className={`badge ${badgeClass(stock.signal_type)}`}>{stock.signal_type ?? "-"}</span>
-                      </td>
-                      <td>{stock.score ?? "-"}</td>
-                      <td>{formatNumber(live?.price ?? stock.latest_close)}</td>
-                      <td>
-                        {live?.fetchedAt
-                          ? new Date(live.fetchedAt).toLocaleString("ja-JP")
-                          : stock.last_data_at
-                            ? new Date(stock.last_data_at).toLocaleString("ja-JP")
-                            : "-"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div> : <div className="empty">銘柄を登録し、Botを実行するとここに表示されます。</div>}
-          <p>
-            <Link href="/stocks">銘柄管理へ</Link>
-          </p>
-        </div>
-
-        <div className="panel">
-          <h1>研究ステータス</h1>
-          {research ? (
+        <div className="panel dashboard-focus">
+          <div className="section-title">
+            <div><p className="eyebrow">Best candidate</p><h2>{best ? `${best.code} ${best.name}` : "候補なし"}</h2></div>
+            <RingGauge value={Number(best?.score ?? 0)} label="調査点" detail={best?.verdict ?? "未調査"} color="#087f8c" />
+          </div>
+          {best ? (
             <>
-              <p className="muted">
-                {new Date(research.generatedAt).toLocaleString("ja-JP")} / {research.source}
-              </p>
-              <div className="research-status-grid">
-                <div>
-                  <span className="muted">検証前</span>
-                  <strong>{formatNumber(improvement?.before)}x</strong>
-                </div>
-                <div>
-                  <span className="muted">検証後</span>
-                  <strong>{formatNumber(improvement?.after)}x</strong>
-                </div>
-                <div>
-                  <span className="muted">期待値</span>
-                  <strong>{formatNumber(research.best.validation.expectancyPct)}%</strong>
-                </div>
-                <div>
-                  <span className="muted">検証銘柄</span>
-                  <strong>{research.universeSize}</strong>
-                </div>
+              <p>{best.thesis}</p>
+              <div className="candidate-numbers">
+                <div><span>想定価格</span><strong>{formatNumber(best.estimated_order_price)}円</strong></div>
+                <div><span>購入可能</span><strong>{best.affordable_shares}株</strong></div>
+                <div><span>想定金額</span><strong>{formatNumber(best.proposed_amount)}円</strong></div>
+                <div><span>保有目安</span><strong>{best.horizon_days}日</strong></div>
               </div>
-              <p className="muted">
-                MA {research.best.config.maShort}/{research.best.config.maBase} / 高値 {research.best.config.breakoutLookback}本 /
-                出来高 {formatNumber(research.best.config.volumeThreshold)}倍 / 利確 {formatNumber(research.best.config.takeProfitPct * 100)}%
-              </p>
             </>
-          ) : (
-            <div className="empty">研究レポートはまだありません。</div>
-          )}
+          ) : <p className="muted">AI調査を実行すると、条件を通過した候補が表示されます。</p>}
+          <Link href="/loop">根拠とリスクを確認</Link>
         </div>
 
         <div className="panel">
-          <h1>仮想bot</h1>
-          <article>
-            <strong>初期資金 100,000円</strong>
-            <p className="muted">
-              現在資産 {formatNumber(virtualEquity)}円 / 騰落率{" "}
-              <span className={virtualReturnPct >= 0 ? "price-up" : "price-down"}>{formatNumber(virtualReturnPct)}%</span>
-            </p>
-            <p className="muted">
-              現金 {formatNumber(virtualCash)}円 / 保有銘柄 {(virtualPositions ?? []).length}件
-            </p>
-            <p>
-              <Link href="/virtual-bot">仮想botの詳細へ</Link>
-            </p>
-          </article>
+          <p className="eyebrow">Research status</p>
+          <h2>{latestLoop ? runLabels[latestLoop.status] ?? latestLoop.status : "未実行"}</h2>
+          <div className="progress-track"><span style={{ width: `${latestLoop ? (latestLoop.completed_iterations / latestLoop.iteration_limit) * 100 : 0}%` }} /></div>
+          <p className="muted">{latestLoop?.summary ?? "現在の情報をWebで調べ、反対材料を含めて3回見直します。"}</p>
+          <Link className="button secondary" href="/loop">調査を管理</Link>
         </div>
+      </section>
 
-        <div className="panel">
-          <h1>通知履歴</h1>
-          {notifications?.length ? (notifications ?? []).map((item) => (
-            <article key={item.id}>
-              <strong>
-                {item.stocks?.code} {item.stocks?.name}
-              </strong>
-              <p className="muted">
-                {item.created_at} / {item.status}
-              </p>
-              {item.error ? <p className="muted">{item.error}</p> : null}
-            </article>
-          )) : <div className="empty">通知履歴はまだありません。</div>}
-        </div>
+      <section className="panel" style={{ marginTop: 18 }}>
+        <div className="section-title"><div><p className="eyebrow">Watchlist</p><h2>監視銘柄</h2></div><Link className="button secondary" href="/stocks/new">銘柄を追加</Link></div>
+        {stocks?.length ? (
+          <div className="table-wrap"><table><thead><tr><th>コード</th><th>銘柄</th><th>現在値</th><th>従来シグナル</th><th>更新時刻</th></tr></thead><tbody>
+            {stocks.map((stock) => {
+              const quote = liveQuotes.get(stock.code);
+              return <tr key={stock.id}><td>{stock.code}</td><td>{stock.name}</td><td>{formatNumber(quote?.price ?? stock.latest_close)}円</td><td><span className={`badge ${badgeClass(stock.signal_type)}`}>{stock.signal_type ?? "-"}</span></td><td>{quote?.fetchedAt ? new Date(quote.fetchedAt).toLocaleString("ja-JP") : stock.last_data_at ? new Date(stock.last_data_at).toLocaleString("ja-JP") : "-"}</td></tr>;
+            })}
+          </tbody></table></div>
+        ) : <div className="empty">監視銘柄はまだありません。</div>}
       </section>
     </main>
   );

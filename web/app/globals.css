@@ -60,6 +60,11 @@ button:hover,
   border-color: var(--accent-strong);
 }
 
+button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
 button.secondary,
 .button.secondary {
   background: #fff;
@@ -144,6 +149,43 @@ main,
 
 .hero-stat b {
   font-size: 26px;
+}
+
+.small-lot-hero {
+  min-height: 430px;
+}
+
+.small-lot-visual {
+  align-content: center;
+  background: #102a36;
+  border-radius: 8px;
+  color: #fff;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  padding: 24px;
+}
+
+.small-lot-visual > div:not(.visual-arrow) {
+  border-top: 3px solid #58c7bd;
+  display: grid;
+  gap: 6px;
+  padding-top: 12px;
+}
+
+.small-lot-visual span {
+  color: #bcd3db;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.small-lot-visual strong {
+  font-size: 20px;
+}
+
+.visual-arrow {
+  align-self: center;
+  color: #58c7bd;
 }
 
 .topbar {
@@ -262,6 +304,245 @@ main,
 .metrics {
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   margin-bottom: 18px;
+}
+
+.loop-start-form input {
+  display: none;
+}
+
+.loop-safety {
+  border-left: 4px solid var(--warn);
+}
+
+.loop-overview {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(230px, 0.55fr) minmax(0, 1.45fr);
+  margin-bottom: 28px;
+}
+
+.loop-budget {
+  background: #102a36;
+  border-radius: 8px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 210px;
+  padding: 24px;
+}
+
+.loop-budget span,
+.loop-budget small {
+  color: #c8dce3;
+  font-weight: 700;
+}
+
+.loop-budget strong {
+  font-size: 44px;
+  line-height: 1.1;
+  margin: 10px 0;
+}
+
+.loop-progress {
+  box-shadow: none;
+}
+
+.progress-track {
+  background: #e7edf1;
+  border-radius: 4px;
+  height: 8px;
+  margin: 18px 0;
+  overflow: hidden;
+}
+
+.progress-track span {
+  background: var(--accent);
+  display: block;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.loop-candidates {
+  margin: 28px 0;
+}
+
+.candidate-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.candidate-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 44px minmax(0, 1fr);
+  padding: 20px;
+}
+
+.candidate-rank {
+  color: #8a99a8;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.candidate-title,
+.candidate-numbers,
+.section-title {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.candidate-title span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.candidate-title h3,
+.section-title h2 {
+  margin: 2px 0 0;
+}
+
+.score-orbit {
+  align-items: center;
+  border: 6px solid #dfe6ed;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  height: 78px;
+  justify-content: center;
+  min-width: 78px;
+}
+
+.score-orbit.is-good {
+  border-color: #8dd5b0;
+}
+
+.score-orbit strong {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.score-orbit small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.candidate-numbers {
+  background: #f3f7f9;
+  border-radius: 6px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 14px 0;
+  padding: 12px;
+}
+
+.candidate-numbers div {
+  border-left: 1px solid var(--line);
+  padding: 0 12px;
+}
+
+.candidate-numbers div:first-child {
+  border-left: 0;
+}
+
+.candidate-numbers span,
+.candidate-numbers strong {
+  display: block;
+}
+
+.candidate-numbers span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.metric-bars {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.metric-bars div {
+  align-items: center;
+  display: grid;
+  font-size: 12px;
+  gap: 8px;
+  grid-template-columns: 90px minmax(0, 1fr) 28px;
+}
+
+.metric-bars i {
+  background: #e7edf1;
+  border-radius: 3px;
+  height: 6px;
+  overflow: hidden;
+}
+
+.metric-bars i b {
+  background: var(--accent);
+  display: block;
+  height: 100%;
+}
+
+.metric-bars em,
+.run-list em {
+  color: var(--muted);
+  font-style: normal;
+}
+
+.risk-list {
+  border-left: 3px solid #d5a23c;
+  margin: 16px 0;
+  padding-left: 12px;
+}
+
+.risk-list p {
+  color: var(--muted);
+  margin: 5px 0;
+}
+
+.source-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.source-list a {
+  background: #eef5f7;
+  border-radius: 4px;
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 9px;
+}
+
+.loop-settings {
+  align-items: start;
+}
+
+.form-grid {
+  display: grid;
+  gap: 0 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.run-list > div {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) 70px 50px;
+  padding: 11px 0;
+}
+
+.run-list span {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .metric b {
@@ -823,8 +1104,34 @@ button.candidate-chip:hover {
   .comparison-grid,
   .research-visual-grid,
   .risk-reward,
-  .flow-band {
+  .flow-band,
+  .loop-overview,
+  .candidate-numbers,
+  .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .small-lot-visual {
+    grid-template-columns: 1fr;
+  }
+
+  .visual-arrow {
+    transform: rotate(90deg);
+  }
+
+  .candidate-card {
+    grid-template-columns: 1fr;
+  }
+
+  .candidate-numbers div,
+  .candidate-numbers div:first-child {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding: 8px 0;
+  }
+
+  .candidate-numbers div:first-child {
+    border-top: 0;
   }
 
   .visual-strip > div,

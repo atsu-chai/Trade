@@ -24,9 +24,9 @@ export default async function VirtualBotPage() {
       .insert({
         user_id: user.id,
         name: "仮想bot",
-        initial_cash: 100000,
-        cash_balance: 100000,
-        latest_equity: 100000,
+        initial_cash: 10000,
+        cash_balance: 10000,
+        latest_equity: 10000,
         realized_pnl: 0,
       })
       .select("*")
@@ -62,8 +62,8 @@ export default async function VirtualBotPage() {
     };
   });
 
-  const cashBalance = Number(bot?.cash_balance ?? 100000);
-  const initialCash = Number(bot?.initial_cash ?? 100000);
+  const cashBalance = Number(bot?.cash_balance ?? 10000);
+  const initialCash = Number(bot?.initial_cash ?? 10000);
   const realizedPnl = Number(bot?.realized_pnl ?? 0);
   const marketValue = positionRows.reduce((sum, position) => sum + position.displayMarketValue, 0);
   const unrealizedPnl = positionRows.reduce((sum, position) => sum + position.displayUnrealizedPnl, 0);
@@ -76,7 +76,7 @@ export default async function VirtualBotPage() {
         <div>
           <p className="eyebrow">Virtual Bot</p>
           <h1>仮想bot</h1>
-          <p className="muted">初期資金10万円の仮想資産を、Botのシグナルで自動運用した結果を確認します。</p>
+          <p className="muted">初期資金1万円で、SBI証券のS株を想定した仮想運用結果を確認します。</p>
         </div>
       </section>
 

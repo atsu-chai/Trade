@@ -119,7 +119,7 @@ export function StockForm({ stock }: { stock?: Stock }) {
       <div className="form-row">
         <label>
           想定購入金額
-          <input name="target_amount" type="number" defaultValue={stock?.target_amount ?? 100000} />
+          <input name="target_amount" type="number" min="1000" step="1000" defaultValue={stock?.target_amount ?? 10000} />
         </label>
         <label>
           保有単価

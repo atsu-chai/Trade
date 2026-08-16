@@ -1,24 +1,12 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { findStrongBuyCandidates } from "@/app/actions";
-import { StrongBuyCandidateList } from "@/components/strong-buy-candidate-list";
 import { StockForm } from "@/components/stock-form";
-import { MAX_STRONG_BUY_CANDIDATES, type StrongBuyCandidate } from "@/lib/market-scan";
 import { createClient } from "@/lib/supabase/server";
-
-function parseScan(value?: string) {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value) as StrongBuyCandidate[];
-    return Array.isArray(parsed) ? parsed.slice(0, MAX_STRONG_BUY_CANDIDATES) : [];
-  } catch {
-    return [];
-  }
-}
 
 export default async function NewStockPage({
   searchParams,
 }: {
-  searchParams: Promise<{ code?: string; name?: string; tags?: string; scan?: string }>;
+  searchParams: Promise<{ code?: string; name?: string; tags?: string }>;
 }) {
   const supabase = await createClient();
   const {
@@ -26,7 +14,6 @@ export default async function NewStockPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const params = await searchParams;
-  const candidates = parseScan(params.scan);
   const initialStock =
     params.code || params.name || params.tags
       ? {
@@ -44,21 +31,8 @@ export default async function NewStockPage({
           <h1>銘柄追加</h1>
           <p className="muted">監視対象、保有情報、通知判断に使う補助情報を登録します。</p>
         </div>
-        <form action={findStrongBuyCandidates}>
-          <button type="submit">買いシグナル銘柄を探す</button>
-        </form>
+        <Link className="button" href="/loop">AI調査で候補を探す</Link>
       </section>
-      {candidates.length ? (
-        <section className="panel" style={{ marginBottom: 18 }}>
-          <h2>買いシグナル候補</h2>
-          <p className="muted">
-            Yahoo Financeの15分足で主要銘柄を広く評価し、買い候補を優先しつつ、条件が近い監視候補も含めて最大20件までスコア順に表示しています。
-          </p>
-          <StrongBuyCandidateList candidates={candidates} />
-        </section>
-      ) : params.scan ? (
-        <section className="notice">候補が見つかりませんでした。時間を置くか、相場の強い時間帯に再実行してください。</section>
-      ) : null}
       <section className="panel" id="stock-form-panel">
         <StockForm stock={initialStock} />
       </section>

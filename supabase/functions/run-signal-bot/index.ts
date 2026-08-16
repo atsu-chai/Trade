@@ -54,6 +54,19 @@ type VirtualAnalysisRow = {
   price: number | null;
 };
 
+type CodexLoopRun = {
+  id: number;
+  completed_iterations: number;
+  completed_at: string;
+};
+
+type CodexCandidate = {
+  code: string;
+  score: number;
+  verdict: "候補" | "監視" | "見送り";
+  estimated_order_price: number | string;
+};
+
 type JQuantsQuote = {
   Date: string;
   Code: string;
@@ -119,10 +132,10 @@ const MARKET_DATA_PROVIDER = (Deno.env.get("MARKET_DATA_PROVIDER") ?? "yahoo").t
 const JQUANTS_REFRESH_TOKEN = (Deno.env.get("JQUANTS_REFRESH_TOKEN") ?? "").trim();
 const JQUANTS_EMAIL = (Deno.env.get("JQUANTS_EMAIL") ?? "").trim();
 const JQUANTS_PASSWORD = (Deno.env.get("JQUANTS_PASSWORD") ?? "").trim();
-const VIRTUAL_BOT_INITIAL_CASH = 100000;
-const VIRTUAL_BOT_MAX_POSITIONS = 4;
-const VIRTUAL_BOT_POSITION_RATIO = 0.25;
-const VIRTUAL_BOT_MIN_TRADE_AMOUNT = 10000;
+const VIRTUAL_BOT_INITIAL_CASH = 10000;
+const VIRTUAL_BOT_MAX_POSITIONS = 2;
+const VIRTUAL_BOT_POSITION_RATIO = 0.5;
+const VIRTUAL_BOT_MIN_TRADE_AMOUNT = 1;
 
 function headers(extra: Record<string, string> = {}) {
   return {
@@ -868,6 +881,19 @@ async function loadVirtualPositions(botId: number) {
   return await supabase(`virtual_positions?bot_id=eq.${botId}&select=*`) as VirtualPosition[];
 }
 
+async function loadCodexCandidates(userId: string) {
+  const since = encodeURIComponent(new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString());
+  const runs = await supabase(
+    `analysis_loop_runs?user_id=eq.${userId}&status=eq.completed&completed_at=gte.${since}&select=id,completed_iterations,completed_at&order=completed_at.desc&limit=1`,
+  ) as CodexLoopRun[];
+  const run = runs[0];
+  if (!run) return new Map<string, CodexCandidate>();
+  const candidates = await supabase(
+    `analysis_loop_candidates?run_id=eq.${run.id}&iteration=eq.${run.completed_iterations}&verdict=eq.${encodeURIComponent("候補")}&score=gte.70&select=code,score,verdict,estimated_order_price`,
+  ) as CodexCandidate[];
+  return new Map(candidates.map((candidate) => [candidate.code, candidate]));
+}
+
 async function recordVirtualTrade(params: {
   botId: number;
   stockId: number;
@@ -907,6 +933,7 @@ async function runVirtualPortfolioBot(analyses: VirtualAnalysisRow[]) {
   for (const [userId, rows] of byUser) {
     const bot = await ensureVirtualBot(userId);
     const positions = await loadVirtualPositions(bot.id);
+    const codexCandidates = await loadCodexCandidates(userId);
     const positionMap = new Map(positions.map((position) => [position.stock_id, position]));
     const priceMap = new Map(rows.map((row) => [row.stock.id, row.price]));
 
@@ -918,11 +945,12 @@ async function runVirtualPortfolioBot(analyses: VirtualAnalysisRow[]) {
       const latestPrice = priceMap.get(position.stock_id) ?? toNumber(position.last_price);
       if (!analysis || latestPrice <= 0) continue;
 
-      const exitSignal = ["見送り", "過熱", "利確売り候補", "損切り候補", "撤退検討", "下落リスク上昇"].includes(analysis.signalType);
-      if (!exitSignal) continue;
-
       const quantity = position.quantity;
       const avgCost = toNumber(position.avg_cost);
+      const reachedTakeProfit = latestPrice >= avgCost * (1 + STRATEGY_CONFIG.takeProfitPct);
+      const reachedStopLoss = latestPrice <= avgCost * (1 - STRATEGY_CONFIG.stopLossPct);
+      if (!reachedTakeProfit && !reachedStopLoss) continue;
+
       const proceeds = round(quantity * latestPrice);
       const tradeRealizedPnl = round((latestPrice - avgCost) * quantity);
       cash = round(cash + proceeds);
@@ -936,7 +964,7 @@ async function runVirtualPortfolioBot(analyses: VirtualAnalysisRow[]) {
         quantity,
         price: latestPrice,
         realizedPnl: tradeRealizedPnl,
-        reason: `自動決済: ${analysis.signalType}`,
+        reason: reachedTakeProfit ? "Codex候補の利確条件到達" : "Codex候補の損切り条件到達",
       });
       await supabase(`virtual_positions?id=eq.${position.id}`, { method: "DELETE" });
       positionMap.delete(position.stock_id);
@@ -949,13 +977,14 @@ async function runVirtualPortfolioBot(analyses: VirtualAnalysisRow[]) {
     }, 0));
 
     const candidates = rows
-      .filter((row) => row.signalType === "買い候補" && !positionMap.has(row.stock.id) && (row.price ?? 0) > 0)
-      .sort((a, b) => b.score - a.score)
+      .filter((row) => codexCandidates.has(row.stock.code) && !positionMap.has(row.stock.id) && (row.price ?? 0) > 0)
+      .sort((a, b) => (codexCandidates.get(b.stock.code)?.score ?? 0) - (codexCandidates.get(a.stock.code)?.score ?? 0))
       .slice(0, Math.max(0, VIRTUAL_BOT_MAX_POSITIONS - remainingPositionCount));
 
     for (const candidate of candidates) {
       if (positionMap.size >= VIRTUAL_BOT_MAX_POSITIONS) break;
-      const price = candidate.price ?? 0;
+      const codexCandidate = codexCandidates.get(candidate.stock.code);
+      const price = Math.max(candidate.price ?? 0, toNumber(codexCandidate?.estimated_order_price ?? 0));
       if (price <= 0) continue;
 
       const desiredAmount = Math.min(cash, Math.max(VIRTUAL_BOT_MIN_TRADE_AMOUNT, equityBeforeBuys * VIRTUAL_BOT_POSITION_RATIO));
@@ -990,7 +1019,7 @@ async function runVirtualPortfolioBot(analyses: VirtualAnalysisRow[]) {
         side: "buy",
         quantity,
         price,
-        reason: `自動エントリー: ${candidate.signalType} ${candidate.score}点`,
+        reason: `Codex調査候補: ${codexCandidate?.score ?? 0}点 / S株想定価格`,
       });
     }
 

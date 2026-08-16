@@ -32,13 +32,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {user ? (
               <>
                 <Link href="/dashboard">ダッシュボード</Link>
+                <Link href="/loop">AI調査</Link>
                 <Link href="/stocks">銘柄</Link>
-                <Link href="/signals">シグナル</Link>
-                <Link href="/virtual-bot">仮想bot</Link>
-                <Link href="/backtest">バックテスト</Link>
-                <Link href="/notifications">通知</Link>
-                <Link href="/runs">実行履歴</Link>
-                <Link href="/settings">設定</Link>
+                <Link href="/virtual-bot">1万円仮想運用</Link>
+                <Link href="/settings">通知設定</Link>
                 <form action={signOut}>
                   <button className="secondary">ログアウト</button>
                 </form>
